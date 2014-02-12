@@ -34,9 +34,9 @@ STACKS = 10
 SLICES = 25
 
 # instantiate the forces function between particles
-f = GranularMaterialForce()
+f = GranularMaterialForce(g=0.1)
 # create some particles and a box
-p = Particles(L,f,periodicY=0,periodicZ=1,periodicX=1)
+p = Particles(L, f, periodicY=0, periodicZ=1, periodicX=1)
 p.addParticle(0,L,L/2,0,0,0,1)
 # instantiate Integrator
 integrate = VerletIntegrator(dt)
@@ -95,10 +95,9 @@ def idle():
       if massive:
         r = L/4
       else:
-        r = 0.3*randn()+1.
+        r = 0.3*randn() + 1.
       if on:
-        p.addParticle(.25*randn(),L,L/2,vx,vy,vz,r)
-      f(p)  # update forces
+        p.addParticle(.25*randn(), L, L/2, vx, vy, vz, r)
   glutPostRedisplay()
 
 def key(k, x, y):
@@ -197,11 +196,17 @@ def visible(vis):
 
 if __name__ == '__main__':
 
+    width  = 500
+    height = 500
+    
+    sx = 600
+    sy = 250
+
     # open a window
     glutInit(sys.argv)
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE)
-    glutInitWindowPosition(900,100)
-    glutInitWindowSize(1000,1000)
+    glutInitWindowPosition(sx, sy)
+    glutInitWindowSize(width, height)
     glutCreateWindow("bounce")
     
     # initialize
