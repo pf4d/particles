@@ -19,9 +19,13 @@ vy        = 0      # vertical velocity
 vx        = 0      # horizontal velocity
 vz        = 0      # depth velocity
 
+k         = 1.5    # elastic 'bounce'
+gamma     = 0.4    # energy dissipation/loss
+g         = 0.25   # downward acceleration
+
 on        = True   # start / stop adding particles
 trans     = False  # transparency enable
-partInt   = 400    # how often to add a new particle
+partInt   = 300    # how often to add a new particle
 radiusDiv = 1      # radius divisor
 massive   = False  # the big ball.
 
@@ -34,7 +38,7 @@ STACKS = 10
 SLICES = 25
 
 # instantiate the forces function between particles
-f = GranularMaterialForce(g=0.1)
+f = GranularMaterialForce(k=k, g=g, gamma=gamma)
 # create some particles and a box
 p = Particles(L, f, periodicY=0, periodicZ=1, periodicX=1)
 p.addParticle(0,L,L/2,0,0,0,1)
@@ -97,7 +101,10 @@ def idle():
       else:
         r = 0.3*randn() + 1.
       if on:
-        p.addParticle(.25*randn(), L, L/2, vx, vy, vz, r)
+        px = 0.25*randn()
+        py = L
+        pz = L/2
+        p.addParticle(px, py, pz, vx, vy, vz, r)
   glutPostRedisplay()
 
 def key(k, x, y):
