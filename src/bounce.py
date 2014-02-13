@@ -186,10 +186,10 @@ def special(k, x, y):
       print 'INS   key was pressed: partInt =', partInt
 
 def reshape(width, height):
-  glViewport(0,0,width,height)
+  glViewport(0, 0, width, height)
   glMatrixMode(GL_PROJECTION)
   glLoadIdentity()
-  glOrtho(-L/1.5, L/1.5, -L/1.5, L/1.5, -L, L)
+  glOrtho(-L/1.5, L/1.5, -L/1.5, 2*L, -L, L)
   glMatrixMode(GL_MODELVIEW)
   glShadeModel(GL_SMOOTH)
   #glLight(GL_LIGHT0, GL_AMBIENT, [0.2, 0.2, 0.2 , 1.0])
@@ -203,8 +203,9 @@ def visible(vis):
 
 if __name__ == '__main__':
 
-    width  = 500
-    height = 500
+    i      = 50
+    width  = i*int(L)
+    height = 2*i*int(L)
     
     sx = 600
     sy = 250
