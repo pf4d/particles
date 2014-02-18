@@ -1,5 +1,4 @@
-from numpy import * 
-from pylab import rand
+from pylab import *
 
 # PARTICLES MODULE:
 # This set of classes was developed to model interacting spherical particles in
@@ -22,74 +21,138 @@ from pylab import rand
 
 # 9/23/08 JVJ and Tim Bocek
 
-class GranularMaterialForce:
+class GranularMaterialForce(object):
 
   def __init__(self, k=1.5, gamma=0.3, g=0.25):
     # parameters in force model
-    self.__k = k          # Elastic 'bounce'
-    self.__gamma = gamma  # Energy dissipation/loss
-    self.__g = g          # Gravity
+    self.k     = k       # Elastic 'bounce'
+    self.gamma = gamma   # Energy dissipation/loss
+    self.g     = g       # Gravity
 
   def __call__(self, p):
     # Find position differences
-    d, dx, dy, dz = p.distanceMatrix(p.x, p.y, p.z)
-    
+    r, rx, ry, rz = p.distanceMatrix( p.x, p.y, p.z)
+
     # Compute overlap
-    dr = d - triu(p.sumOfRadii) - tril(p.sumOfRadii)
+    dr = r - p.sumOfRadii
 
     # No forces arising in no overlap cases
     dr[dr > 0] = 0
 
     # Compute elastic particle/particle forces
-    magnitude = -self.__k * dr
+    mag_r = self.k * dr
 
     # Velocity differences
     dv, dvx, dvy, dvz = p.distanceMatrix(p.vx, p.vy, p.vz)
+    domega, domegax, domegay, domegaz = p.distanceMatrix(p.omegax, 
+                                                         p.omegay, 
+                                                         p.omegaz)
+    
+    domegax[dr==0] = 0
+    domegay[dr==0] = 0
+    domegaz[dr==0] = 0
 
     # Damping terms
-    vijDotrij         = dvx*dx + dvy*dy + dvz*dz
-    vijDotrij[dr==0]  = 0.
+    vijDotrij             = dvx*rx + dvy*ry + dvz*rz
+    vijDotrij[dr==0]      = 0 
+    omegaijDotrij         = domegax*rx + domegay*ry + domegaz*rz
+    omegaijDotrij[dr==0]  = 0 
 
     # Damping is subtracted from force
-    magnitude        -= self.__gamma * vijDotrij / d
-    magnitude[d==-1]  = 0
+    mag_r += self.gamma * vijDotrij / r
 
-    cx, cy, cz = self.floorConstraint(p)
+    # floor components of acceleration :
+    crx, cry, crz, ctx, cty, ctz = self.floorConstraint(p)
 
     # Project onto components, sum all forces on each particle
-    p.ax =  sum(magnitude * (-dx/d) * p.ratioOfRadii, axis=1) + cx
-    p.ay =  sum(magnitude * (-dy/d) * p.ratioOfRadii, axis=1) - self.__g + cy
-    p.az =  sum(magnitude * (-dz/d) * p.ratioOfRadii, axis=1) + cz
+    p.ax = sum(mag_r * rx/r * p.ratioOfRadii, axis=1) + crx
+    p.ay = sum(mag_r * ry/r * p.ratioOfRadii, axis=1) + cry - self.g 
+    p.az = sum(mag_r * rz/r * p.ratioOfRadii, axis=1) + crz
+   
+    # find the tangential components of acceleration :
+    ax = tile(p.ax, (p.N, 1))
+    ay = tile(p.ay, (p.N, 1))
+    az = tile(p.az, (p.N, 1))
 
-  def floorConstraint(self,p):
+    ax[dr==0] = 0
+    ay[dr==0] = 0
+    az[dr==0] = 0
+
+    tx = ax - (ax * rx) / r**2 * rx
+    ty = ay - (ay * ry) / r**2 * ry
+    tz = az - (az * rz) / r**2 * rz
+    
+    taux = ry*tz - ty*rz
+    tauy = rx*tz - tx*rz
+    tauz = rx*ty - tx*ry
+
+    I = 0.4*p.r**2
+    
+    f = 0.5
+   
+    epix = 0#f*domegax
+    epiy = 0#f*domegay
+    epiz = 0#f*domegaz
+    
+    # project onto components, sum all angular forces on each particle
+    p.alphax = sum(taux / I - epix, axis=1) + ctx
+    p.alphay = sum(tauy / I - epiy, axis=1) + cty
+    p.alphaz = sum(tauz / I - epiz, axis=1) + ctz
+
+  def floorConstraint(self, p):
     """ 
     This is a highly specific function for a floor that responds (elasticity 
     and damping) the same way a particle does. Presently, if constraints are 
     to change, one would have to rewrite the function.
     """
-    effectiveRadius  = 3. # This is how 'hard' the floor is
-    floorDistance    = p.y + p.L/2 - p.r
-    floorDistance[floorDistance > 0] = 0
-    lowerWallForce   = -self.__k * floorDistance 
-    lowerWallDamping = -self.__gamma * p.vy * floorDistance
-    lowerWallForce   = lowerWallForce - lowerWallDamping
-    cx = 0
-    cy = lowerWallForce * effectiveRadius / p.r
-    cz = 0
-    return cx, cy, cz
+    r          = 3.0 # This is how 'hard' the floor is
+    fd         = p.y + p.L/2 - p.r
+    fd[fd > 0] = 0
+    
+    floorForce_r     = -self.k * fd 
+    floorDamping_r   = -self.gamma * p.vy * fd
+    floorForce_r     = floorForce_r - floorDamping_r
+    crx = 0
+    cry = floorForce_r * r / p.r
+    crz = 0
+    
+    floorDamping_tx  = p.omegax
+    floorDamping_ty  = p.omegay
+    floorDamping_tz  = p.omegaz
+    floorDamping_tx[fd > 0] = 0 
+    floorDamping_ty[fd > 0] = 0 
+    floorDamping_tz[fd > 0] = 0 
 
-class VerletIntegrator:
+    ctx = 0#-floorDamping_tx
+    cty = 0#-floorDamping_ty
+    ctz = 0#-floorDamping_tz
+    return crx, cry, crz, ctx, cty, ctz
+
+
+class VerletIntegrator(object):
 
   def __init__(self, dt=0.01):
     # Time step
-    self.__dt = dt
+    self.dt = dt
 
   def __call__(self, force, p):
-    # Position update
-    p.x = p.x + p.vx*self.__dt + 0.5*p.ax*self.__dt**2
-    p.y = p.y + p.vy*self.__dt + 0.5*p.ay*self.__dt**2
-    p.z = p.z + p.vz*self.__dt + 0.5*p.az*self.__dt**2
+    dt = self.dt
 
+    # Position update
+    p.x = p.x + p.vx*dt + 0.5*p.ax*dt**2
+    p.y = p.y + p.vy*dt + 0.5*p.ay*dt**2
+    p.z = p.z + p.vz*dt + 0.5*p.az*dt**2
+
+    # angular roation update :
+    p.thetax = p.thetax + p.omegax*dt + 0.5*p.alphax*dt**2
+    p.thetay = p.thetay + p.omegay*dt + 0.5*p.alphay*dt**2
+    p.thetaz = p.thetaz + p.omegaz*dt + 0.5*p.alphaz*dt**2
+
+    # 0 <= theta < 360
+    p.thetax = p.thetax % 360
+    p.thetay = p.thetay % 360
+    p.thetaz = p.thetaz % 360
+    
     # Update periodic BC
     p.pbcUpdate()
 
@@ -97,16 +160,26 @@ class VerletIntegrator:
     ax = p.ax
     ay = p.ay
     az = p.az
+    
+    # store angular accelerations for crank-nicolson scheme :
+    alphax = p.alphax
+    alphay = p.alphay
+    alphaz = p.alphaz
 
     force(p) # Force update with new positions
 
     # Velocity updates
-    p.vx = p.vx + 0.5*(ax + p.ax)*self.__dt
-    p.vy = p.vy + 0.5*(ay + p.ay)*self.__dt
-    p.vz = p.vz + 0.5*(az + p.az)*self.__dt
+    p.vx = p.vx + 0.5*(ax + p.ax)*dt
+    p.vy = p.vy + 0.5*(ay + p.ay)*dt
+    p.vz = p.vz + 0.5*(az + p.az)*dt
+
+    # angular velocity updates :
+    p.omegax = p.omegax + 0.5*(alphax + p.alphax)*dt
+    p.omegay = p.omegay + 0.5*(alphay + p.alphay)*dt
+    p.omegaz = p.omegaz + 0.5*(alphaz + p.alphaz)*dt
 
 
-class Particles:
+class Particles(object):
 
   def __init__(self, L, force, periodicX=1, periodicY=1, periodicZ=1):
     # Container size
@@ -129,6 +202,18 @@ class Particles:
     self.az = array([],dtype=self.type)
     # Radii
     self.r  = array([],dtype=self.type)
+    # angular rotation :
+    self.thetax = array([],dtype=self.type)
+    self.thetay = array([],dtype=self.type)
+    self.thetaz = array([],dtype=self.type)
+    # angular velocity :
+    self.omegax = array([],dtype=self.type)
+    self.omegay = array([],dtype=self.type)
+    self.omegaz = array([],dtype=self.type)
+    # angular acceleration :
+    self.alphax = array([],dtype=self.type)
+    self.alphay = array([],dtype=self.type)
+    self.alphaz = array([],dtype=self.type)
     # Periodic on?
     self.periodicX = periodicX 
     self.periodicY = periodicY 
@@ -136,7 +221,9 @@ class Particles:
     # Force function
     self.f = force
      
-  def addParticle(self, x, y, z, vx, vy, vz, r):
+  def addParticle(self, x, y, z, vx, vy, vz, r,
+                  thetax, thetay, thetaz, 
+                  omegax, omegay, omegaz): 
     self.x  = hstack((self.x,x))
     self.y  = hstack((self.y,y))
     self.z  = hstack((self.z,z))
@@ -144,14 +231,24 @@ class Particles:
     self.vy = hstack((self.vy,vy))
     self.vz = hstack((self.vz,vz))
     self.r  = hstack((self.r,r))
+    self.thetax = hstack((self.thetax,thetax))
+    self.thetay = hstack((self.thetay,thetay))
+    self.thetaz = hstack((self.thetaz,thetaz))
+    self.omegax = hstack((self.omegax,omegax))
+    self.omegay = hstack((self.omegay,omegay))
+    self.omegaz = hstack((self.omegaz,omegaz))
     self.N  = self.N+1
     temp    = tile(self.r,(self.N,1))
-    self.sumOfRadii = temp + temp.T 
+    self.sumOfRadii   = temp + temp.T 
+    self.sumOfRadii3  = temp**3 + (temp**3).T 
+    self.diffOfRadii3 = temp**3 - (temp**3).T 
     self.ratioOfRadii = temp / temp.T
     self.f(self)
 
   def pbcUpdate(self):
-    " ""Moves paricles across periodic boundary"" "
+    """
+    Moves paricles across periodic boundary
+    """
     if self.periodicX:
       self.x[self.x >  self.L/2] = self.x[self.x >  self.L/2] - self.L
       self.x[self.x < -self.L/2] = self.x[self.x < -self.L/2] + self.L
