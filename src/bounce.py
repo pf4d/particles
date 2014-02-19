@@ -28,12 +28,12 @@ vz        = 0      # depth velocity
 k         = 30.0   # elastic 'bounce'
 gamma     = 0.1    # energy dissipation/loss
 k         = 1.5    # elastic 'bounce'
-gamma     = 0.4    # energy dissipation/loss
+gamma     = 0.1    # energy dissipation/loss
 g         = 0.25   # downward acceleration
 
 on        = True   # start / stop adding particles
 trans     = False  # transparency enable
-partInt   = 60     # how often to add a new particle
+partInt   = 6/dt   # how often to add a new particle
 radiusDiv = 1      # radius divisor
 massive   = False  # the big ball.
 
@@ -113,6 +113,7 @@ def display():
     glColor(0.0,0.0,0.0,1.0)
     glutWireSphere(p.r[i]/radiusDiv*1.01, SLICES/3, STACKS/3)
     glColor(0.5, 0.5, 0.5)
+  print p.alphax[0], p.alphay[0], p.alphaz[0]
   glPopMatrix()
 
   glLoadIdentity()
@@ -263,14 +264,14 @@ def special(k, x, y):
     print 'PGDWN key was pressed: vz =', vz
   
   if k == GLUT_KEY_HOME:
-    partInt += 10
+    partInt += 1/dt
     print 'HOME  key was pressed: partInt =', partInt
   
   if k == GLUT_KEY_INSERT:
-    if partInt-10 == 0:
+    if partInt - 1/dt <= 0:
       print "ADD PARTICLE INTERVAL DIVISOR AT MIN VALUE"
     else:
-      partInt -= 10
+      partInt -= 1/dt
       print 'INS   key was pressed: partInt =', partInt
 
 def mouse(button,state,x,y):

@@ -73,31 +73,51 @@ class GranularMaterialForce(object):
     ax = tile(p.ax, (p.N, 1))
     ay = tile(p.ay, (p.N, 1))
     az = tile(p.az, (p.N, 1))
-
-    ax[dr==0] = 0
-    ay[dr==0] = 0
-    az[dr==0] = 0
-
-    tx = ax - (ax * rx) / r**2 * rx
-    ty = ay - (ay * ry) / r**2 * ry
-    tz = az - (az * rz) / r**2 * rz
     
-    taux = ry*tz - ty*rz
-    tauy = rx*tz - tx*rz
-    tauz = rx*ty - tx*ry
+    omegax = tile(p.omegax, (p.N, 1))
+    omegay = tile(p.omegay, (p.N, 1))
+    omegaz = tile(p.omegaz, (p.N, 1))
+    omegax[dr==0] = 0
+    omegay[dr==0] = 0
+    omegaz[dr==0] = 0
+ 
+    f  = 1000000
+    wx = ax - (ax * rx) / r**2 * rx
+    wy = ay - (ay * ry) / r**2 * ry
+    wz = az - (az * rz) / r**2 * rz
+    
+    w = sqrt(wx**2 + wy**2 + wz**2)
+    
+    vtx = wx / w * omegax * p.r
+    vty = wy / w * omegay * p.r
+    vtz = wz / w * omegaz * p.r
+    
+    wx[dr==0] = 0
+    wy[dr==0] = 0
+    wz[dr==0] = 0
+    vtx[dr==0] = 0
+    vty[dr==0] = 0
+    vtz[dr==0] = 0
+
+    taux = ry*wz - wy*rz
+    tauy = rx*wz - wx*rz
+    tauz = rx*wy - wx*ry
+
+    epix = ry*vtz - vty*rz
+    epiy = rx*vtz - vtx*rz
+    epiz = rx*vty - vtx*ry
 
     I = 0.4*p.r**2
     
-    f = 0.5
-   
-    epix = 0#f*domegax
-    epiy = 0#f*domegay
-    epiz = 0#f*domegaz
+    #epi = - f*omegaijDotrij / r
+    #epix = f*omegax
+    #epiy = f*omegay
+    #epiz = f*omegaz
     
     # project onto components, sum all angular forces on each particle
-    p.alphax = sum(taux / I - epix, axis=1) + ctx
-    p.alphay = sum(tauy / I - epiy, axis=1) + cty
-    p.alphaz = sum(tauz / I - epiz, axis=1) + ctz
+    p.alphax = sum((taux - f*vtx) / I, axis=1) + ctx
+    p.alphay = sum((tauy - f*vty) / I, axis=1) + cty
+    p.alphaz = sum((tauz - f*vtz) / I, axis=1) + ctz
 
   def floorConstraint(self, p):
     """ 
