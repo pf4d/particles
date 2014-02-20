@@ -1,0 +1,32 @@
+from OpenGL.GL          import *
+from OpenGL.GLUT        import *
+from OpenGL.GLE         import *
+from OpenGL.GLU         import *
+
+def display():
+    glLoadIdentity();
+    glClear(GL_COLOR_BUFFER_BIT)
+    glColor(0, 1, 1)
+    glBegin(GL_TRIANGLES)
+    glVertex(0,0,0)
+    glVertex(100,0,0)
+    glVertex(50, 100, 0)
+    glEnd()
+    glutSwapBuffers()
+
+def keyboard(key, x, y):
+    if key == 'q':
+        exit(0)
+
+def setProjection():
+    glMatrixMode(GL_PROJECTION)
+    glOrtho(0, 100, 0, 100, -1, 1)
+    glMatrixMode(GL_MODELVIEW)
+
+if __name__ == '__main__':
+    glutInit()
+    glutCreateWindow("hello")
+    glutDisplayFunc(display)
+    glutKeyboardFunc(keyboard)
+    setProjection()
+    glutMainLoop()
