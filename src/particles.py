@@ -31,7 +31,7 @@ class GranularMaterialForce(object):
 
   def __call__(self, p):
     # Find position differences
-    r, rx, ry, rz = p.distanceMatrix( p.x, p.y, p.z)
+    r, rx, ry, rz = p.distanceMatrix(p.x, p.y, p.z)
 
     # Compute overlap
     dr = r - p.sumOfRadii
@@ -68,7 +68,7 @@ class GranularMaterialForce(object):
     p.ax = sum(mag_r * rx/r * p.ratioOfRadii, axis=1) + crx
     p.ay = sum(mag_r * ry/r * p.ratioOfRadii, axis=1) + cry - self.g 
     p.az = sum(mag_r * rz/r * p.ratioOfRadii, axis=1) + crz
-   
+    
     # find the tangential components of acceleration :
     ax = tile(p.ax, (p.N, 1))
     ay = tile(p.ay, (p.N, 1))
@@ -77,47 +77,53 @@ class GranularMaterialForce(object):
     omegax = tile(p.omegax, (p.N, 1))
     omegay = tile(p.omegay, (p.N, 1))
     omegaz = tile(p.omegaz, (p.N, 1))
-    omegax[dr==0] = 0
-    omegay[dr==0] = 0
-    omegaz[dr==0] = 0
- 
-    f  = 1000000
-    wx = ax - (ax * rx) / r**2 * rx
-    wy = ay - (ay * ry) / r**2 * ry
-    wz = az - (az * rz) / r**2 * rz
     
-    w = sqrt(wx**2 + wy**2 + wz**2)
+    radius = tile(p.r, (p.N, 1))
+
+    # projection of a onto the tangent plane to r (tangential acceleration) :
+    atx = ax - (ax * rx) / r**2 * rx
+    aty = ay - (ay * ry) / r**2 * ry
+    atz = az - (az * rz) / r**2 * rz
     
-    vtx = wx / w * omegax * p.r
-    vty = wy / w * omegay * p.r
-    vtz = wz / w * omegaz * p.r
+    # projection of omega onto the tangent plane to r (tangential velocity) : 
+    vtx = omegax - (omegax * rx) / r**2 * rx
+    vty = omegay - (omegay * ry) / r**2 * ry
+    vtz = omegaz - (omegaz * rz) / r**2 * rz
     
-    wx[dr==0] = 0
-    wy[dr==0] = 0
-    wz[dr==0] = 0
+    print 'theta:', p.thetax[0], p.thetay[0], p.thetaz[0]
+    print 'omega:', omegax[0,0], omegay[0,0], omegaz[0,0]
+    print 'w:',     atx[0,0],    aty[0,0],    atz[0,0] 
+    print 'vt',     vtx[0,0],    vty[0,0],    vtz[0,0]
+    print
+   
+    # no angular forces where particles do not touch :
+    atx[dr==0] = 0
+    aty[dr==0] = 0
+    atz[dr==0] = 0
     vtx[dr==0] = 0
     vty[dr==0] = 0
     vtz[dr==0] = 0
 
-    taux = ry*wz - wy*rz
-    tauy = rx*wz - wx*rz
-    tauz = rx*wy - wx*ry
+    # calculate torque (r x F) :
+    taux = ry*atz - aty*rz
+    tauy = rx*atz - atx*rz
+    tauz = rx*aty - atx*ry
 
+    # calculate tangential velocity parallel to torque (r x vt) :
     epix = ry*vtz - vty*rz
     epiy = rx*vtz - vtx*rz
     epiz = rx*vty - vtx*ry
 
+    # angular momentum damping coefficient :
+    f = 0.00
+
+    # moment of inertia for a sphere :
     I = 0.4*p.r**2
     
-    #epi = - f*omegaijDotrij / r
-    #epix = f*omegax
-    #epiy = f*omegay
-    #epiz = f*omegaz
-    
     # project onto components, sum all angular forces on each particle
-    p.alphax = sum((taux - f*vtx) / I, axis=1) + ctx
-    p.alphay = sum((tauy - f*vty) / I, axis=1) + cty
-    p.alphaz = sum((tauz - f*vtz) / I, axis=1) + ctz
+    p.alphax = sum((taux - f*epix) / I, axis=1) + ctx
+    p.alphay = sum((tauy - f*epiy) / I, axis=1) + cty
+    p.alphaz = sum((tauz - f*epiz) / I, axis=1) + ctz
 
   def floorConstraint(self, p):
     """ 
@@ -169,9 +175,9 @@ class VerletIntegrator(object):
     p.thetaz = p.thetaz + p.omegaz*dt + 0.5*p.alphaz*dt**2
 
     # 0 <= theta < 360
-    p.thetax = p.thetax % 360
-    p.thetay = p.thetay % 360
-    p.thetaz = p.thetaz % 360
+    #p.thetax = p.thetax % 360
+    #p.thetay = p.thetay % 360
+    #p.thetaz = p.thetaz % 360
     
     # Update periodic BC
     p.pbcUpdate()

@@ -7,18 +7,11 @@ from OpenGL.GLE         import *
 from OpenGL.GLU         import *
 import sys, time
 
+rotx      = 0      # camera x rotation
+roty      = 0      # camera y rotation
+rotz      = 0      # camera z rotation
 
-# this program is a 'driver' for a simple simulation of partilces in a box with
-# periodic boundary conditions. Your objective will be to complete the code here
-# so that you can 'see' the particles with OpenGL.
-
-tStart = t0 = time.time()
-
-rotx = 0
-roty = 0
-rotz = 0
-
-dt        = 0.01    # time step taken by the time integration routine.
+dt        = 0.10   # time step taken by the time integration routine.
 L         = 10.0   # size of the box.
 t         = 0      # initial time
 vy        = 0      # vertical velocity
@@ -31,7 +24,7 @@ k         = 1.5    # elastic 'bounce'
 gamma     = 0.1    # energy dissipation/loss
 g         = 0.25   # downward acceleration
 
-on        = True   # start / stop adding particles
+on        = False  # start / stop adding particles
 trans     = False  # transparency enable
 partInt   = 6/dt   # how often to add a new particle
 radiusDiv = 1      # radius divisor
@@ -75,28 +68,30 @@ def init():
   glEnable(GL_LIGHT1)
   
 def display():
-  glColor(0.5, 0.8, 0.0)
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
+  
+  # camera viewpoint :
+  glLoadIdentity()
+  gluLookAt(0,0,10,   # Camera Position
+            0,0,0,    # Point the Camera looks at
+            0,1,0)    # the Up-Vector
+  
+  glRotate(rotx,1,0,0)
+  glRotate(roty,0,1,0)
+  glRotate(rotz,0,0,1)
 
+  # draw the spheres :
   glPushMatrix() 
+  glColor(0.5, 0.8, 0.0)
   glMaterial(GL_FRONT, GL_EMISSION,  [0.0, 0.0, 0.0, 0.0])
   glMaterial(GL_FRONT, GL_SPECULAR,  [0.5, 0.5, 0.5, 0.0])
   glMaterial(GL_FRONT, GL_SHININESS, 100.0)
-  
   for i in range(p.N):
     if trans:
       mag = sqrt(p.vx[i]**2 + p.vy[i]**2 + p.vz[i]**2) + 0.02
     else:
       mag = 1.0
   
-    glLoadIdentity()
-    gluLookAt(0,0,10,   # Camera Position
-              0,0,0,    # Point the Camera looks at
-              0,1,0)    # the Up-Vector
-    
-    glRotate(rotx,1,0,0)
-    glRotate(roty,0,1,0)
-    glRotate(rotz,0,0,1)
     if p.ax[i] >= 0.5 or p.ax[i] <= -0.5:
       glColor(p.r[i]/1.5, p.r[i]/1.5, p.r[i]/1.5, mag)
     elif p.vx[i] >= 0.5:
@@ -105,28 +100,52 @@ def display():
       glColor(0.0, 0.5, 0.8, mag)
     else:
       glColor(p.r[i]/2, p.r[i]/2, 0.0, mag)
+    
+    glPushMatrix()
     glTranslate(p.x[i], p.y[i], p.z[i])
-    glRotate(p.thetax[i],1,0,0)
-    glRotate(p.thetay[i],0,1,0)
-    glRotate(p.thetaz[i],0,0,1)
+    glRotate(p.thetax[i]*180/pi, 1,0,0)
+    glRotate(p.thetay[i]*180/pi, 0,1,0)
+    glRotate(p.thetaz[i]*180/pi, 0,0,1)
     glutSolidSphere(p.r[i]/radiusDiv, SLICES, STACKS)
     glColor(0.0,0.0,0.0,1.0)
     glutWireSphere(p.r[i]/radiusDiv*1.01, SLICES/3, STACKS/3)
-    glColor(0.5, 0.5, 0.5)
-  print p.alphax[0], p.alphay[0], p.alphaz[0]
-  glPopMatrix()
+    glPopMatrix()
+  
+  glPopMatrix()  
+  #print p.alphax[0], p.alphay[0], p.alphaz[0]
 
-  glLoadIdentity()
-  gluLookAt(0,0,10,   # Camera Position
-            0,0,0,    # Point the Camera looks at
-            0,1,0)    # the Up-Vector
-  
-  glRotatef(rotx,1,0,0)
-  glRotatef(roty,0,1,0)
-  glRotatef(rotz,0,0,1)
-  
+  # draw velocity vectors : 
+  glColor4f(1.0,1.0,1.0,1.0)
+  glDisable(GL_LIGHTING)
+  glBegin(GL_LINES)
+  for i in range(p.N):
+    v_mag = sqrt(p.vx[i]**2 + p.vy[i]**2 + p.vz[i]**2) + 1e-16
+    xyz1 = array([p.x[i],  p.y[i],  p.z[i]])
+    vxyz = array([p.vx[i], p.vy[i], p.vz[i]]) / v_mag * 4
+    xyz2 = xyz1 + vxyz
+    glVertex3fv(xyz1)
+    glVertex3fv(xyz2)
+  glEnd()
+  glEnable(GL_LIGHTING)
   glPushMatrix()
   
+  # draw angular velocity vectors : 
+  glPopMatrix()
+  glColor4f(1.0,0.0,0.0,1.0)
+  glDisable(GL_LIGHTING)
+  glBegin(GL_LINES)
+  for i in range(p.N):
+    omega_mag = sqrt(p.omegax[i]**2 + p.omegay[i]**2 + p.omegaz[i]**2) + 1e-16
+    xyz1 = array([p.x[i],      p.y[i],      p.z[i]])
+    vxyz = array([p.omegax[i], p.omegay[i], p.omegaz[i]]) / omega_mag * 4
+    xyz2 = xyz1 + vxyz
+    glVertex3fv(xyz1)
+    glVertex3fv(xyz2)
+  glEnd()
+  glEnable(GL_LIGHTING)
+  glPushMatrix()
+ 
+  # draw the lights : 
   lx1 = 0.0
   ly1 = 2*L + 2
   lz1 = 0.0
@@ -296,12 +315,12 @@ def motion(x,y):
 
 if __name__ == '__main__':
 
-    i      = 80
+    i      = 70
     width  = i*int(L)
     height = i*int(L)
     
     sx = 600
-    sy = 250
+    sy = 300
 
     # open a window
     glutInit(sys.argv)
