@@ -77,8 +77,6 @@ class GranularMaterialForce(object):
     omegax = tile(p.omegax, (p.N, 1))
     omegay = tile(p.omegay, (p.N, 1))
     omegaz = tile(p.omegaz, (p.N, 1))
-    
-    radius = tile(p.r, (p.N, 1))
 
     # projection of a onto the tangent plane to r (tangential acceleration) :
     atx = ax - (ax * rx) / r**2 * rx
@@ -90,11 +88,18 @@ class GranularMaterialForce(object):
     vty = omegay - (omegay * ry) / r**2 * ry
     vtz = omegaz - (omegaz * rz) / r**2 * rz
     
+    # calculate the radius vector to the point of torque :
+    radx = rx/r * p.r
+    rady = ry/r * p.r
+    radz = rz/r * p.r
+   
+    # print info for the 1st ball :
     print 'theta:', p.thetax[0], p.thetay[0], p.thetaz[0]
     print 'omega:', omegax[0,0], omegay[0,0], omegaz[0,0]
     print 'w:',     atx[0,0],    aty[0,0],    atz[0,0] 
     print 'vt',     vtx[0,0],    vty[0,0],    vtz[0,0]
-    print
+    print 'rad',    sqrt(radx[0]**2 + rady[0]**2 + radz[0]**2)
+    print ""
    
     # no angular forces where particles do not touch :
     atx[dr==0] = 0
@@ -105,17 +110,17 @@ class GranularMaterialForce(object):
     vtz[dr==0] = 0
 
     # calculate torque (r x F) :
-    taux = ry*atz - aty*rz
-    tauy = rx*atz - atx*rz
-    tauz = rx*aty - atx*ry
+    taux = rady*atz - aty*radz
+    tauy = radx*atz - atx*radz
+    tauz = radx*aty - atx*rady
 
     # calculate tangential velocity parallel to torque (r x vt) :
-    epix = ry*vtz - vty*rz
-    epiy = rx*vtz - vtx*rz
-    epiz = rx*vty - vtx*ry
+    epix = rady*vtz - vty*radz
+    epiy = radx*vtz - vtx*radz
+    epiz = radx*vty - vtx*rady
 
     # angular momentum damping coefficient :
-    f = 0.00
+    f = 0.000
 
     # moment of inertia for a sphere :
     I = 0.4*p.r**2
@@ -174,10 +179,10 @@ class VerletIntegrator(object):
     p.thetay = p.thetay + p.omegay*dt + 0.5*p.alphay*dt**2
     p.thetaz = p.thetaz + p.omegaz*dt + 0.5*p.alphaz*dt**2
 
-    # 0 <= theta < 360
-    #p.thetax = p.thetax % 360
-    #p.thetay = p.thetay % 360
-    #p.thetaz = p.thetaz % 360
+    # 0 <= theta < 360 degrees = 2 pi
+    #p.thetax = p.thetax % 2*pi
+    #p.thetay = p.thetay % 2*pi
+    #p.thetaz = p.thetaz % 2*pi
     
     # Update periodic BC
     p.pbcUpdate()

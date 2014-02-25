@@ -11,7 +11,7 @@ rotx      = 0      # camera x rotation
 roty      = 0      # camera y rotation
 rotz      = 0      # camera z rotation
 
-dt        = 0.10   # time step taken by the time integration routine.
+dt        = 0.01   # time step taken by the time integration routine.
 L         = 10.0   # size of the box.
 t         = 0      # initial time
 vy        = 0      # vertical velocity
@@ -82,7 +82,7 @@ def display():
 
   # draw the spheres :
   glPushMatrix() 
-  glColor(0.5, 0.8, 0.0)
+  glColor(0.6, 0.1, 0.1)
   glMaterial(GL_FRONT, GL_EMISSION,  [0.0, 0.0, 0.0, 0.0])
   glMaterial(GL_FRONT, GL_SPECULAR,  [0.5, 0.5, 0.5, 0.0])
   glMaterial(GL_FRONT, GL_SHININESS, 100.0)
@@ -92,13 +92,15 @@ def display():
     else:
       mag = 1.0
   
-    if p.ax[i] >= 0.5 or p.ax[i] <= -0.5:
-      glColor(p.r[i]/1.5, p.r[i]/1.5, p.r[i]/1.5, mag)
-    elif p.vx[i] >= 0.5:
+    if (p.ax[i] > 0.5 or p.ax[i] < -0.5) and i != 0:
+      glColor(p.r[i]/2.0, p.r[i]/2.0, p.r[i]/2.0, mag)
+    elif (p.vx[i] > 0.5 or p.vy[i] > 0.5 or p.vz[i] > 0.5) and i != 0:
       glColor(0.8, 0.4, 0.0, mag)
-    elif p.vx[i] <= -0.5:
-      glColor(0.0, 0.5, 0.8, mag)
-    else:
+    #elif p.vx[i] > 0.5:
+    #  glColor(0.8, 0.4, 0.0, mag)
+    #elif p.vx[i] < -0.5:
+    #  glColor(0.0, 0.5, 0.8, mag)
+    elif i != 0:
       glColor(p.r[i]/2, p.r[i]/2, 0.0, mag)
     
     glPushMatrix()
@@ -111,17 +113,17 @@ def display():
     glutWireSphere(p.r[i]/radiusDiv*1.01, SLICES/3, STACKS/3)
     glPopMatrix()
   
-  glPopMatrix()  
   #print p.alphax[0], p.alphay[0], p.alphaz[0]
 
   # draw velocity vectors : 
+  glPopMatrix()  
   glColor4f(1.0,1.0,1.0,1.0)
   glDisable(GL_LIGHTING)
   glBegin(GL_LINES)
   for i in range(p.N):
     v_mag = sqrt(p.vx[i]**2 + p.vy[i]**2 + p.vz[i]**2) + 1e-16
     xyz1 = array([p.x[i],  p.y[i],  p.z[i]])
-    vxyz = array([p.vx[i], p.vy[i], p.vz[i]]) / v_mag * 4
+    vxyz = array([p.vx[i], p.vy[i], p.vz[i]]) / v_mag * 1.5
     xyz2 = xyz1 + vxyz
     glVertex3fv(xyz1)
     glVertex3fv(xyz2)
@@ -131,13 +133,29 @@ def display():
   
   # draw angular velocity vectors : 
   glPopMatrix()
-  glColor4f(1.0,0.0,0.0,1.0)
+  glColor4f(0.0,1.0,0.0,1.0)
   glDisable(GL_LIGHTING)
   glBegin(GL_LINES)
   for i in range(p.N):
     omega_mag = sqrt(p.omegax[i]**2 + p.omegay[i]**2 + p.omegaz[i]**2) + 1e-16
     xyz1 = array([p.x[i],      p.y[i],      p.z[i]])
-    vxyz = array([p.omegax[i], p.omegay[i], p.omegaz[i]]) / omega_mag * 4
+    vxyz = array([p.omegax[i], p.omegay[i], p.omegaz[i]]) / omega_mag * 1.5
+    xyz2 = xyz1 + vxyz
+    glVertex3fv(xyz1)
+    glVertex3fv(xyz2)
+  glEnd()
+  glEnable(GL_LIGHTING)
+  glPushMatrix()
+  
+  # draw angular acceleration vectors : 
+  glPopMatrix()
+  glColor4f(1.0,0.0,0.0,1.0)
+  glDisable(GL_LIGHTING)
+  glBegin(GL_LINES)
+  for i in range(p.N):
+    alpha_mag = sqrt(p.alphax[i]**2 + p.alphay[i]**2 + p.alphaz[i]**2) + 1e-16
+    xyz1 = array([p.x[i],      p.y[i],      p.z[i]])
+    vxyz = array([p.alphax[i], p.alphay[i], p.alphaz[i]]) / alpha_mag * 1.5
     xyz2 = xyz1 + vxyz
     glVertex3fv(xyz1)
     glVertex3fv(xyz2)
@@ -205,6 +223,7 @@ def idle():
         r = L/4
       else:
         r = 0.3*randn() + 1.
+        r = 1.0
       if on:
         px = 0.25*randn()
         py = 2*L
@@ -319,8 +338,8 @@ if __name__ == '__main__':
     width  = i*int(L)
     height = i*int(L)
     
-    sx = 600
-    sy = 300
+    sx = 600 + 1920
+    sy = 300 + 100
 
     # open a window
     glutInit(sys.argv)
