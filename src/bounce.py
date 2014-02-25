@@ -11,7 +11,7 @@ rotx      = 0      # camera x rotation
 roty      = 0      # camera y rotation
 rotz      = 0      # camera z rotation
 
-dt        = 0.01   # time step taken by the time integration routine.
+dt        = 0.10   # time step taken by the time integration routine.
 L         = 10.0   # size of the box.
 t         = 0      # initial time
 vy        = 0      # vertical velocity
@@ -32,7 +32,7 @@ massive   = False  # the big ball.
 
 # particle update data:
 COUNT         = 1  # number of time steps computed
-UPDATE_FRAMES = 2  # how often to redraw screen
+UPDATE_FRAMES = 1  # how often to redraw screen
 
 # how resolved are the spheres?
 STACKS = 30
@@ -42,10 +42,10 @@ SLICES = 30
 f = GranularMaterialForce(k=k, g=g, gamma=gamma)
 # create some particles and a box
 p = Particles(L, f, periodicY=0, periodicZ=1, periodicX=1)
-#  def addParticle(self, x, y, z, vx, vy, vz, r,
-#                  thetax, thetay, thetaz, 
-#                  omegax, omegay, omegaz): 
-p.addParticle(0,2*L,0,0,0,0,1,0,0,0,0,0,0)
+#  addParticle(x, y, z, vx, vy, vz, r,
+#              thetax, thetay, thetaz, 
+#              omegax, omegay, omegaz): 
+p.addParticle(0,2*L,0,0,0,0,1,0,0,0,0.3,0.3,0)
 # instantiate Integrator
 integrate = VerletIntegrator(dt)
 
@@ -91,17 +91,21 @@ def display():
       mag = sqrt(p.vx[i]**2 + p.vy[i]**2 + p.vz[i]**2) + 0.02
     else:
       mag = 1.0
-  
-    if (p.ax[i] > 0.5 or p.ax[i] < -0.5) and i != 0:
+    
+    if abs(p.alphax[i]) > 0.01 or \
+       abs(p.alphay[i]) > 0.01 or \
+       abs(p.alphaz[i]) > 0.01:
+      glColor(p.r[i]/2.0, p.r[i]/4.0, p.r[i]/2.0, mag)
+    elif (p.ax[i] > 0.5 or p.ax[i] < -0.5) and i != 0:
       glColor(p.r[i]/2.0, p.r[i]/2.0, p.r[i]/2.0, mag)
-    elif (p.vx[i] > 0.5 or p.vy[i] > 0.5 or p.vz[i] > 0.5) and i != 0:
-      glColor(0.8, 0.4, 0.0, mag)
+    #elif (p.vx[i] > 0.5 or p.vy[i] > 0.5 or p.vz[i] > 0.5) and i != 0:
+    #  glColor(0.8, 0.4, 0.0, mag)
     #elif p.vx[i] > 0.5:
     #  glColor(0.8, 0.4, 0.0, mag)
     #elif p.vx[i] < -0.5:
     #  glColor(0.0, 0.5, 0.8, mag)
     elif i != 0:
-      glColor(p.r[i]/2, p.r[i]/2, 0.0, mag)
+      glColor(p.r[i]/1, p.r[i]/2, 0.0, mag)
     
     glPushMatrix()
     glTranslate(p.x[i], p.y[i], p.z[i])
@@ -338,8 +342,8 @@ if __name__ == '__main__':
     width  = i*int(L)
     height = i*int(L)
     
-    sx = 600 + 1920
-    sy = 300 + 100
+    sx = 600# + 1920
+    sy = 300# + 100
 
     # open a window
     glutInit(sys.argv)
