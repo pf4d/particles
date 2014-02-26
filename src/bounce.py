@@ -129,7 +129,8 @@ def display():
   for i in range(p.N):
     v_mag = sqrt(p.vx[i]**2 + p.vy[i]**2 + p.vz[i]**2) + 1e-16
     xyz1 = array([p.x[i],  p.y[i],  p.z[i]])
-    vxyz = array([p.vx[i], p.vy[i], p.vz[i]]) / v_mag * 1.5
+    vxyz = array([p.vx[i], p.vy[i], p.vz[i]])
+    vxyz = vxyz / v_mag * (p.r[i]+0.5)
     xyz2 = xyz1 + vxyz
     glVertex3fv(xyz1)
     glVertex3fv(xyz2)
@@ -145,7 +146,8 @@ def display():
   for i in range(p.N):
     omega_mag = sqrt(p.omegax[i]**2 + p.omegay[i]**2 + p.omegaz[i]**2) + 1e-16
     xyz1 = array([p.x[i],      p.y[i],      p.z[i]])
-    vxyz = array([p.omegax[i], p.omegay[i], p.omegaz[i]]) / omega_mag * 1.5
+    vxyz = array([p.omegax[i], p.omegay[i], p.omegaz[i]]) 
+    vxyz = vxyz / omega_mag * (p.r[i]+0.5)
     xyz2 = xyz1 + vxyz
     glVertex3fv(xyz1)
     glVertex3fv(xyz2)
@@ -161,7 +163,8 @@ def display():
   for i in range(p.N):
     alpha_mag = sqrt(p.alphax[i]**2 + p.alphay[i]**2 + p.alphaz[i]**2) + 1e-16
     xyz1 = array([p.x[i],      p.y[i],      p.z[i]])
-    vxyz = array([p.alphax[i], p.alphay[i], p.alphaz[i]]) / alpha_mag * 1.5
+    vxyz = array([p.alphax[i], p.alphay[i], p.alphaz[i]])
+    vxyz = vxyz / alpha_mag * (p.r[i]+0.5)
     xyz2 = xyz1 + vxyz
     glVertex3fv(xyz1)
     glVertex3fv(xyz2)

@@ -32,10 +32,10 @@ class GranularMaterialForce(object):
 
   def __call__(self, p):
     # Find position differences
-    r, rx, ry, rz = p.distanceMatrix(p.x, p.y, p.z)
+    d, dx, dy, dz = p.distanceMatrix(p.x, p.y, p.z)
 
     # Compute overlap
-    dr = r - p.sumOfRadii
+    dr = d - p.sumOfRadii
     fill_diagonal(dr, 0)
 
     # No forces arising in no overlap cases
@@ -56,19 +56,19 @@ class GranularMaterialForce(object):
     domegaz[dr==0] = 0
     
     # Damping terms
-    vijDotrij             = dvx*rx + dvy*ry + dvz*rz
+    vijDotrij             = dvx*dx + dvy*dy + dvz*dz
     vijDotrij[dr==0]      = 0 
 
     # Damping is subtracted from force
-    mag_r += self.gamma * vijDotrij / r
+    mag_r += self.gamma * vijDotrij / d
 
     # floor components of acceleration :
     crx, cry, crz, ctx, cty, ctz = self.floorConstraint(p)
 
     # Project onto components, sum all forces on each particle
-    p.ax = sum(mag_r * rx/r * p.ratioOfRadii, axis=1) + crx
-    p.ay = sum(mag_r * ry/r * p.ratioOfRadii, axis=1) + cry - self.g 
-    p.az = sum(mag_r * rz/r * p.ratioOfRadii, axis=1) + crz
+    p.ax = sum(mag_r * dx/d * p.ratioOfRadii, axis=1) + crx
+    p.ay = sum(mag_r * dy/d * p.ratioOfRadii, axis=1) + cry - self.g 
+    p.az = sum(mag_r * dz/d * p.ratioOfRadii, axis=1) + crz
     
     omegax = tile(p.omegax, (p.N, 1))
     omegay = tile(p.omegay, (p.N, 1))
@@ -79,19 +79,19 @@ class GranularMaterialForce(object):
     omegaz[dr==0] = 0
 
     # projection of a onto the tangent plane to r (tangential acceleration) :
-    atx = dax - (dax * rx) / r**2 * rx
-    aty = day - (day * ry) / r**2 * ry
-    atz = daz - (daz * rz) / r**2 * rz
+    atx = dax - (dax * dx) / d**2 * dx
+    aty = day - (day * dy) / d**2 * dy
+    atz = daz - (daz * dz) / d**2 * dz
     
     # projection of v onto the tangent plane to r (tangential velocity) : 
-    vtx = dvx - (dvx * rx) / r**2 * rx
-    vty = dvy - (dvy * ry) / r**2 * ry
-    vtz = dvz - (dvz * rz) / r**2 * rz
+    vtx = dvx - (dvx * dx) / d**2 * dx
+    vty = dvy - (dvy * dy) / d**2 * dy
+    vtz = dvz - (dvz * dz) / d**2 * dz
     
     # calculate the radius vector to the point of torque :
-    radx = rx/r * p.r
-    rady = ry/r * p.r
-    radz = rz/r * p.r
+    radx = dx/d * p.r
+    rady = dy/d * p.r
+    radz = dz/d * p.r
    
     # print info for the 1st ball :
     print "====================================================="
@@ -123,7 +123,7 @@ class GranularMaterialForce(object):
     f = 0.0
 
     # angular velocity damping coefficient from medium (air) :
-    g = 0.10
+    g = 0.1
 
     # moment of inertia for a sphere :
     I = 0.4*p.r**2
@@ -132,13 +132,13 @@ class GranularMaterialForce(object):
     kappa = 0.01
    
     # project onto components, sum all angular forces on each particle
-    p.alphax = + sum(-(taux + f*epix) / I - kappa*omegax, axis=1) \
+    p.alphax = + sum(-(taux + f*epix) / I - kappa*domegax, axis=1) \
                - g*p.omegax \
                + ctx
-    p.alphay = + sum(-(tauy + f*epiy) / I - kappa*omegay, axis=1) \
+    p.alphay = + sum(-(tauy + f*epiy) / I - kappa*domegay, axis=1) \
                - g*p.omegay \
                + cty
-    p.alphaz = + sum(-(tauz + f*epiz) / I - kappa*omegaz, axis=1) \
+    p.alphaz = + sum(-(tauz + f*epiz) / I - kappa*domegaz, axis=1) \
                - g*p.omegaz \
                + ctz
 
