@@ -11,7 +11,7 @@ rotx      = 0      # camera x rotation
 roty      = 0      # camera y rotation
 rotz      = 0      # camera z rotation
 
-dt        = 0.10   # time step taken by the time integration routine.
+dt        = 0.05   # time step taken by the time integration routine.
 L         = 10.0   # size of the box.
 t         = 0      # initial time
 vy        = 0      # vertical velocity
@@ -92,12 +92,13 @@ def display():
     else:
       mag = 1.0
     
-    if abs(p.alphax[i]) > 0.01 or \
-       abs(p.alphay[i]) > 0.01 or \
-       abs(p.alphaz[i]) > 0.01:
-      glColor(p.r[i]/2.0, p.r[i]/4.0, p.r[i]/2.0, mag)
-    elif (p.ax[i] > 0.5 or p.ax[i] < -0.5) and i != 0:
-      glColor(p.r[i]/2.0, p.r[i]/2.0, p.r[i]/2.0, mag)
+    #if abs(p.alphax[i]) > 0.01 or \
+    #   abs(p.alphay[i]) > 0.01 or \
+    #   abs(p.alphaz[i]) > 0.01:
+    #  glColor(p.r[i]/2.0, p.r[i]/4.0, p.r[i]/2.0, mag)
+    if (p.ax[i] > 0.5 or p.ax[i] < -0.5) and i != 0:
+      #glColor(p.r[i]/2.0, p.r[i]/2.0, p.r[i]/2.0, mag)
+      glColor(1/2.0, 1/2.0, 1/2.0, mag)
     #elif (p.vx[i] > 0.5 or p.vy[i] > 0.5 or p.vz[i] > 0.5) and i != 0:
     #  glColor(0.8, 0.4, 0.0, mag)
     #elif p.vx[i] > 0.5:
@@ -105,7 +106,8 @@ def display():
     #elif p.vx[i] < -0.5:
     #  glColor(0.0, 0.5, 0.8, mag)
     elif i != 0:
-      glColor(p.r[i]/1, p.r[i]/2, 0.0, mag)
+      #glColor(p.r[i]/1, p.r[i]/2, 0.0, mag)
+      glColor(1, 1/2.0, 0.0, mag)
     
     glPushMatrix()
     glTranslate(p.x[i], p.y[i], p.z[i])

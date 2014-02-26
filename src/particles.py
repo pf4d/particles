@@ -28,6 +28,7 @@ class GranularMaterialForce(object):
     self.k     = k       # Elastic 'bounce'
     self.gamma = gamma   # Energy dissipation/loss
     self.g     = g       # Gravity
+    self.f     = 1.0
 
   def __call__(self, p):
     # Find position differences
@@ -45,6 +46,7 @@ class GranularMaterialForce(object):
 
     # Velocity differences
     dv, dvx, dvy, dvz = p.distanceMatrix(p.vx, p.vy, p.vz)
+    da, dax, day, daz = p.distanceMatrix(p.ax, p.ay, p.az)
     domega, domegax, domegay, domegaz = p.distanceMatrix(p.omegax, 
                                                          p.omegay, 
                                                          p.omegaz)
@@ -68,33 +70,23 @@ class GranularMaterialForce(object):
     p.ay = sum(mag_r * ry/r * p.ratioOfRadii, axis=1) + cry - self.g 
     p.az = sum(mag_r * rz/r * p.ratioOfRadii, axis=1) + crz
     
-    # needed to find the tangential components of acceleration :
-    ax = tile(p.ax, (p.N, 1))
-    ay = tile(p.ay, (p.N, 1))
-    az = tile(p.az, (p.N, 1))
-    
-    # needed to find the tangential components of velocity :
-    vx = tile(p.vx, (p.N, 1))
-    vy = tile(p.vy, (p.N, 1))
-    vz = tile(p.vz, (p.N, 1))
-    
     omegax = tile(p.omegax, (p.N, 1))
     omegay = tile(p.omegay, (p.N, 1))
     omegaz = tile(p.omegaz, (p.N, 1))
     
-    #omegax[dr==0] = 0
-    #omegay[dr==0] = 0
-    #omegaz[dr==0] = 0
+    omegax[dr==0] = 0
+    omegay[dr==0] = 0
+    omegaz[dr==0] = 0
 
     # projection of a onto the tangent plane to r (tangential acceleration) :
-    atx = ax - (ax * rx) / r**2 * rx
-    aty = ay - (ay * ry) / r**2 * ry
-    atz = az - (az * rz) / r**2 * rz
+    atx = dax - (dax * rx) / r**2 * rx
+    aty = day - (day * ry) / r**2 * ry
+    atz = daz - (daz * rz) / r**2 * rz
     
-    # projection of omega onto the tangent plane to r (tangential velocity) : 
-    vtx = vx - (vx * rx) / r**2 * rx
-    vty = vy - (vy * ry) / r**2 * ry
-    vtz = vz - (vz * rz) / r**2 * rz
+    # projection of v onto the tangent plane to r (tangential velocity) : 
+    vtx = dvx - (dvx * rx) / r**2 * rx
+    vty = dvy - (dvy * ry) / r**2 * ry
+    vtz = dvz - (dvz * rz) / r**2 * rz
     
     # calculate the radius vector to the point of torque :
     radx = rx/r * p.r
@@ -102,20 +94,20 @@ class GranularMaterialForce(object):
     radz = rz/r * p.r
    
     # print info for the 1st ball :
+    print "====================================================="
+    print "red particle statistics :"
     print 'theta:', p.thetax[0], p.thetay[0], p.thetaz[0]
-    print 'omega:', omegax[0,0], omegay[0,0], omegaz[0,0]
-    print 'w:',     atx[0,0],    aty[0,0],    atz[0,0] 
-    print 'vt',     vtx[0,0],    vty[0,0],    vtz[0,0]
-    print 'rad',    sqrt(radx[0]**2 + rady[0]**2 + radz[0]**2)
-    print ""
+    print 'omega:', p.omegax[0], p.omegay[0], p.omegaz[0]
+    print 'alpha:', p.alphax[0], p.alphay[0], p.alphaz[0]
+    print "=====================================================\n"
    
     # no angular forces where particles do not touch :
     atx[dr==0] = 0
     aty[dr==0] = 0
     atz[dr==0] = 0
-    #vtx[dr==0] = 0
-    #vty[dr==0] = 0
-    #vtz[dr==0] = 0
+    vtx[dr==0] = 0
+    vty[dr==0] = 0
+    vtz[dr==0] = 0
 
     # calculate torque (r x F) :
     taux = rady*atz - aty*radz
@@ -127,23 +119,28 @@ class GranularMaterialForce(object):
     epiy = radx*vtz - vtx*radz
     epiz = radx*vty - vtx*rady
 
-    # angular momentum damping coefficient :
-    f = 0.01
+    # linear velocity frictional contribution to torque coefficient :
+    f = 0.0
+
+    # angular velocity damping coefficient from medium (air) :
+    g = 0.10
 
     # moment of inertia for a sphere :
     I = 0.4*p.r**2
     
-    # angular damping :
-    kappa = 0.00
+    # angular momentum exchange coefficient :
+    kappa = 0.01
    
-    # spring damping :
-    beta  = 0.0
-    mag_t = - beta*dr
-    
     # project onto components, sum all angular forces on each particle
-    p.alphax = sum(mag_t - kappa*omegax + (taux - f*epix) / I, axis=1) + ctx
-    p.alphay = sum(mag_t - kappa*omegay + (tauy - f*epiy) / I, axis=1) + cty
-    p.alphaz = sum(mag_t - kappa*omegaz + (tauz - f*epiz) / I, axis=1) + ctz
+    p.alphax = + sum(-(taux + f*epix) / I - kappa*omegax, axis=1) \
+               - g*p.omegax \
+               + ctx
+    p.alphay = + sum(-(tauy + f*epiy) / I - kappa*omegay, axis=1) \
+               - g*p.omegay \
+               + cty
+    p.alphaz = + sum(-(tauz + f*epiz) / I - kappa*omegaz, axis=1) \
+               - g*p.omegaz \
+               + ctz
 
   def floorConstraint(self, p):
     """ 
@@ -169,9 +166,9 @@ class GranularMaterialForce(object):
     floorDamping_ty[fd > 0] = 0 
     floorDamping_tz[fd > 0] = 0 
 
-    ctx = 0#-floorDamping_tx
-    cty = 0#-floorDamping_ty
-    ctz = 0#-floorDamping_tz
+    ctx = 0#-self.f*floorDamping_tx
+    cty = 0#-self.f*floorDamping_ty
+    ctz = 0#-self.f*floorDamping_tz
     return crx, cry, crz, ctx, cty, ctz
 
 
@@ -194,11 +191,6 @@ class VerletIntegrator(object):
     p.thetay = p.thetay + p.omegay*dt + 0.5*p.alphay*dt**2
     p.thetaz = p.thetaz + p.omegaz*dt + 0.5*p.alphaz*dt**2
 
-    # 0 <= theta < 360 degrees = 2 pi
-    #p.thetax = p.thetax % 2*pi
-    #p.thetay = p.thetay % 2*pi
-    #p.thetaz = p.thetaz % 2*pi
-    
     # Update periodic BC
     p.pbcUpdate()
 
@@ -276,6 +268,9 @@ class Particles(object):
     self.vx = hstack((self.vx,vx))
     self.vy = hstack((self.vy,vy))
     self.vz = hstack((self.vz,vz))
+    self.ax = hstack((self.ax,0))
+    self.ay = hstack((self.ay,0))
+    self.az = hstack((self.az,0))
     self.r  = hstack((self.r,r))
     self.thetax = hstack((self.thetax,thetax))
     self.thetay = hstack((self.thetay,thetay))
@@ -283,6 +278,9 @@ class Particles(object):
     self.omegax = hstack((self.omegax,omegax))
     self.omegay = hstack((self.omegay,omegay))
     self.omegaz = hstack((self.omegaz,omegaz))
+    self.alphax = hstack((self.alphax,0))
+    self.alphay = hstack((self.alphay,0))
+    self.alphaz = hstack((self.alphaz,0))
     self.N  = self.N+1
     temp    = tile(self.r,(self.N,1))
     self.sumOfRadii   = temp + temp.T
