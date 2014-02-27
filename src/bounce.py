@@ -11,7 +11,7 @@ rotx      = 0      # camera x rotation
 roty      = 0      # camera y rotation
 rotz      = 0      # camera z rotation
 
-dt        = 0.05   # time step taken by the time integration routine.
+dt        = 0.10   # time step taken by the time integration routine.
 L         = 10.0   # size of the box.
 t         = 0      # initial time
 vy        = 0      # vertical velocity
@@ -35,8 +35,8 @@ COUNT         = 1  # number of time steps computed
 UPDATE_FRAMES = 1  # how often to redraw screen
 
 # how resolved are the spheres?
-STACKS = 30
-SLICES = 30
+STACKS = 60
+SLICES = 60
 
 # instantiate the forces function between particles
 f = GranularMaterialForce(k=k, g=g, gamma=gamma)
@@ -53,7 +53,7 @@ def init():
   glEnable(GL_COLOR_MATERIAL)
   glEnable(GL_BLEND)
   glShadeModel(GL_SMOOTH)
-  #glShadeModel(GL_FLAT)
+  glShadeModel(GL_FLAT)
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA)
   glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE)
 
@@ -114,63 +114,65 @@ def display():
     glRotate(p.thetax[i]*180/pi, 1,0,0)
     glRotate(p.thetay[i]*180/pi, 0,1,0)
     glRotate(p.thetaz[i]*180/pi, 0,0,1)
+    glMaterial(GL_FRONT, GL_SPECULAR,  [0.5, 0.5, 0.5, 0.0])
+    glMaterial(GL_FRONT, GL_SHININESS, 100.0)
     glutSolidSphere(p.r[i]/radiusDiv, SLICES, STACKS)
     glColor(0.0,0.0,0.0,1.0)
-    glutWireSphere(p.r[i]/radiusDiv*1.01, SLICES/3, STACKS/3)
+    glMaterial(GL_FRONT, GL_SPECULAR,  [0.0, 0.0, 0.0, 0.0])
+    glMaterial(GL_FRONT, GL_SHININESS, 0.0)
+    glutWireSphere(p.r[i]/radiusDiv*1.01, SLICES/6, STACKS/6)
     glPopMatrix()
   
-  #print p.alphax[0], p.alphay[0], p.alphaz[0]
-
-  # draw velocity vectors : 
-  glPopMatrix()  
-  glColor4f(1.0,1.0,1.0,1.0)
-  glDisable(GL_LIGHTING)
-  glBegin(GL_LINES)
-  for i in range(p.N):
-    v_mag = sqrt(p.vx[i]**2 + p.vy[i]**2 + p.vz[i]**2) + 1e-16
-    xyz1 = array([p.x[i],  p.y[i],  p.z[i]])
-    vxyz = array([p.vx[i], p.vy[i], p.vz[i]])
-    vxyz = vxyz / v_mag * (p.r[i]+0.5)
-    xyz2 = xyz1 + vxyz
-    glVertex3fv(xyz1)
-    glVertex3fv(xyz2)
-  glEnd()
-  glEnable(GL_LIGHTING)
-  glPushMatrix()
-  
-  # draw angular velocity vectors : 
-  glPopMatrix()
-  glColor4f(0.0,1.0,0.0,1.0)
-  glDisable(GL_LIGHTING)
-  glBegin(GL_LINES)
-  for i in range(p.N):
-    omega_mag = sqrt(p.omegax[i]**2 + p.omegay[i]**2 + p.omegaz[i]**2) + 1e-16
-    xyz1 = array([p.x[i],      p.y[i],      p.z[i]])
-    vxyz = array([p.omegax[i], p.omegay[i], p.omegaz[i]]) 
-    vxyz = vxyz / omega_mag * (p.r[i]+0.5)
-    xyz2 = xyz1 + vxyz
-    glVertex3fv(xyz1)
-    glVertex3fv(xyz2)
-  glEnd()
-  glEnable(GL_LIGHTING)
-  glPushMatrix()
-  
-  # draw angular acceleration vectors : 
-  glPopMatrix()
-  glColor4f(1.0,0.0,0.0,1.0)
-  glDisable(GL_LIGHTING)
-  glBegin(GL_LINES)
-  for i in range(p.N):
-    alpha_mag = sqrt(p.alphax[i]**2 + p.alphay[i]**2 + p.alphaz[i]**2) + 1e-16
-    xyz1 = array([p.x[i],      p.y[i],      p.z[i]])
-    vxyz = array([p.alphax[i], p.alphay[i], p.alphaz[i]])
-    vxyz = vxyz / alpha_mag * (p.r[i]+0.5)
-    xyz2 = xyz1 + vxyz
-    glVertex3fv(xyz1)
-    glVertex3fv(xyz2)
-  glEnd()
-  glEnable(GL_LIGHTING)
-  glPushMatrix()
+  ## draw velocity vectors : 
+  #glPopMatrix()  
+  #glColor4f(1.0,1.0,1.0,1.0)
+  #glDisable(GL_LIGHTING)
+  #glBegin(GL_LINES)
+  #for i in range(p.N):
+  #  v_mag = sqrt(p.vx[i]**2 + p.vy[i]**2 + p.vz[i]**2) + 1e-16
+  #  xyz1 = array([p.x[i],  p.y[i],  p.z[i]])
+  #  vxyz = array([p.vx[i], p.vy[i], p.vz[i]])
+  #  vxyz = vxyz / v_mag * (p.r[i]+0.5)
+  #  xyz2 = xyz1 + vxyz
+  #  glVertex3fv(xyz1)
+  #  glVertex3fv(xyz2)
+  #glEnd()
+  #glEnable(GL_LIGHTING)
+  #glPushMatrix()
+  #
+  ## draw angular velocity vectors : 
+  #glPopMatrix()
+  #glColor4f(0.0,1.0,0.0,1.0)
+  #glDisable(GL_LIGHTING)
+  #glBegin(GL_LINES)
+  #for i in range(p.N):
+  #  omega_mag = sqrt(p.omegax[i]**2 + p.omegay[i]**2 + p.omegaz[i]**2) + 1e-16
+  #  xyz1 = array([p.x[i],      p.y[i],      p.z[i]])
+  #  vxyz = array([p.omegax[i], p.omegay[i], p.omegaz[i]]) 
+  #  vxyz = vxyz / omega_mag * (p.r[i]+0.5)
+  #  xyz2 = xyz1 + vxyz
+  #  glVertex3fv(xyz1)
+  #  glVertex3fv(xyz2)
+  #glEnd()
+  #glEnable(GL_LIGHTING)
+  #glPushMatrix()
+  #
+  ## draw angular acceleration vectors : 
+  #glPopMatrix()
+  #glColor4f(1.0,0.0,0.0,1.0)
+  #glDisable(GL_LIGHTING)
+  #glBegin(GL_LINES)
+  #for i in range(p.N):
+  #  alpha_mag = sqrt(p.alphax[i]**2 + p.alphay[i]**2 + p.alphaz[i]**2) + 1e-16
+  #  xyz1 = array([p.x[i],      p.y[i],      p.z[i]])
+  #  vxyz = array([p.alphax[i], p.alphay[i], p.alphaz[i]])
+  #  vxyz = vxyz / alpha_mag * (p.r[i]+0.5)
+  #  xyz2 = xyz1 + vxyz
+  #  glVertex3fv(xyz1)
+  #  glVertex3fv(xyz2)
+  #glEnd()
+  #glEnable(GL_LIGHTING)
+  #glPushMatrix()
  
   # draw the lights : 
   lx1 = 0.0

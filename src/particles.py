@@ -74,6 +74,10 @@ class GranularMaterialForce(object):
     omegay = tile(p.omegay, (p.N, 1))
     omegaz = tile(p.omegaz, (p.N, 1))
     
+    omegax = omegax + omegax.T 
+    omegay = omegax + omegax.T 
+    omegaz = omegax + omegax.T 
+    
     omegax[dr==0] = 0
     omegay[dr==0] = 0
     omegaz[dr==0] = 0
@@ -129,16 +133,16 @@ class GranularMaterialForce(object):
     I = 0.4*p.r**2
     
     # angular momentum exchange coefficient :
-    kappa = 0.01
+    kappa = 0.9
    
     # project onto components, sum all angular forces on each particle
-    p.alphax = + sum(-(taux + f*epix) / I - kappa*domegax, axis=1) \
+    p.alphax = + sum(-(taux + f*epix) / I - kappa*omegax, axis=1) \
                - g*p.omegax \
                + ctx
-    p.alphay = + sum(-(tauy + f*epiy) / I - kappa*domegay, axis=1) \
+    p.alphay = + sum(-(tauy + f*epiy) / I - kappa*omegay, axis=1) \
                - g*p.omegay \
                + cty
-    p.alphaz = + sum(-(tauz + f*epiz) / I - kappa*domegaz, axis=1) \
+    p.alphaz = + sum(-(tauz + f*epiz) / I - kappa*omegaz, axis=1) \
                - g*p.omegaz \
                + ctz
 
@@ -159,16 +163,16 @@ class GranularMaterialForce(object):
     cry = floorForce_r * r / p.r
     crz = 0
     
-    floorDamping_tx  = p.omegax
-    floorDamping_ty  = p.omegay
-    floorDamping_tz  = p.omegaz
-    floorDamping_tx[fd > 0] = 0 
-    floorDamping_ty[fd > 0] = 0 
-    floorDamping_tz[fd > 0] = 0 
+    floorDamping_tx  = p.omegax.copy()
+    floorDamping_ty  = p.omegay.copy()
+    floorDamping_tz  = p.omegaz.copy()
+    floorDamping_tx[fd == 0] = 0 
+    floorDamping_ty[fd == 0] = 0 
+    floorDamping_tz[fd == 0] = 0 
 
-    ctx = 0#-self.f*floorDamping_tx
-    cty = 0#-self.f*floorDamping_ty
-    ctz = 0#-self.f*floorDamping_tz
+    ctx = -self.f*floorDamping_tx
+    cty = -self.f*floorDamping_ty
+    ctz = -self.f*floorDamping_tz
     return crx, cry, crz, ctx, cty, ctz
 
 
