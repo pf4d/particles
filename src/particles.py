@@ -47,13 +47,6 @@ class GranularMaterialForce(object):
     # Velocity differences
     dv, dvx, dvy, dvz = p.distanceMatrix(p.vx, p.vy, p.vz)
     da, dax, day, daz = p.distanceMatrix(p.ax, p.ay, p.az)
-    domega, domegax, domegay, domegaz = p.distanceMatrix(p.omegax, 
-                                                         p.omegay, 
-                                                         p.omegaz)
-    
-    domegax[dr==0] = 0
-    domegay[dr==0] = 0
-    domegaz[dr==0] = 0
     
     # Damping terms
     vijDotrij             = dvx*dx + dvy*dy + dvz*dz
@@ -97,14 +90,6 @@ class GranularMaterialForce(object):
     rady = dy/d * p.r
     radz = dz/d * p.r
    
-    # print info for the 1st ball :
-    print "====================================================="
-    print "red particle statistics :"
-    print 'theta:', p.thetax[0], p.thetay[0], p.thetaz[0]
-    print 'omega:', p.omegax[0], p.omegay[0], p.omegaz[0]
-    print 'alpha:', p.alphax[0], p.alphay[0], p.alphaz[0]
-    print "=====================================================\n"
-   
     # no angular forces where particles do not touch :
     atx[dr==0] = 0
     aty[dr==0] = 0
@@ -133,7 +118,7 @@ class GranularMaterialForce(object):
     I = 0.4*p.r**2
     
     # angular momentum exchange coefficient :
-    kappa = 0.9
+    kappa = 0.9*p.r
    
     # project onto components, sum all angular forces on each particle
     p.alphax = + sum(-(taux + f*epix) / I - kappa*omegax, axis=1) \
@@ -173,6 +158,7 @@ class GranularMaterialForce(object):
     ctx = -self.f*floorDamping_tx
     cty = -self.f*floorDamping_ty
     ctz = -self.f*floorDamping_tz
+
     return crx, cry, crz, ctx, cty, ctz
 
 
@@ -288,8 +274,6 @@ class Particles(object):
     self.N  = self.N+1
     temp    = tile(self.r,(self.N,1))
     self.sumOfRadii   = temp + temp.T
-    self.sumOfRadii3  = temp**3 + (temp**3).T 
-    self.diffOfRadii3 = temp**3 - (temp**3).T 
     self.ratioOfRadii = temp / temp.T
     self.f(self)
 
