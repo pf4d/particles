@@ -1,5 +1,6 @@
 # Blender v2.63 (sub 0) OBJ File: 'phantom.blend'
 # www.blender.org
+mtllib phantom.mtl
 o Cylinder_Cylinder.002
 v 0.033741 -0.472978 0.458256
 v 0.033741 -2.309993 0.458256
