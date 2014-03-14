@@ -29,7 +29,7 @@ pvx = 0
 pvy = 0
 pvz = 0
 pr = 1
-f = GranularMaterialForce(k=1.5, g=.1, gamma=.1)
+f = GranularMaterialForce(k=1.5, g=.000001, gamma=.1)
 p = Particles(L, f, periodicY=0, periodicZ=1, periodicX=1)
 integrate = VerletIntegrator(dt)
 #p.addParticle(px,py,pz,pvx,pvy,pvz,pr,0,0,0,0,0,0)
@@ -59,7 +59,7 @@ def drawParticles():
 #particle = p.addParticle(px,py,pz,pvx,pvy,pvz,pr,0,0,0,0,0,0)
 
 glLightfv(GL_LIGHT0, GL_POSITION, (-40, 200, 100, 0.0))
-glLightfv(GL_LIGHT0, GL_AMBIENT, (0.2, 0.2, 0.2, 1.0))
+glLightfv(GL_LIGHT0, GL_AMBIENT, (0.5, 0.5, 0.5, 1.0))
 glLightfv(GL_LIGHT0, GL_DIFFUSE, (0.5, 0.5, 0.5, 1.0))
 glEnable(GL_LIGHT0)
 glEnable(GL_LIGHTING)
@@ -96,22 +96,22 @@ while 1:
             sys.exit()
         elif e.type == KEYDOWN and e.key == K_UP:
             #paz -= .2
-            p.az[0] -= .2
+            p.az[0] -= 10
         elif e.type == KEYDOWN and e.key == K_DOWN:
             #paz += .2
-            p.az[0] += .2
+            p.az[0] += 10
         elif e.type == KEYDOWN and e.key == K_a:
             pvx -= .2
-            p.ax[0] -= .2
+            p.ax[0] -= 10
         elif e.type == KEYDOWN and e.key == K_d:
             pvx += .2
-            p.ax[0] += .2
+            p.ax[0] += 10
         elif e.type == KEYDOWN and e.key == K_w:
             pvy += .2
-            p.ay[0] += .2
+            p.ay[0] += 10
         elif e.type == KEYDOWN and e.key == K_s:
             pvy -= .2
-            p.ay[0] -= .2
+            p.ay[0] -= 10
         elif e.type == MOUSEBUTTONDOWN:
             if e.button == 4: zpos = max(1, zpos-1)
             elif e.button == 5: zpos += 1
@@ -152,31 +152,13 @@ while 1:
     glMatrixMode(GL_MODELVIEW)
     glLoadIdentity()
     #gluLookAt(cameraDist, cameraTarget, cameraUp)
-    gluLookAt(cameraDist[0],cameraDist[1],cameraDist[2],cameraTarget[0],cameraTarget[1],cameraTarget[2],cameraUp[0],cameraUp[1],cameraUp[2])    #glTranslate(tx/20., ty/20., - zpos)
-
+    gluLookAt(cameraDist[0],cameraDist[1],cameraDist[2],cameraTarget[0],cameraTarget[1],cameraTarget[2],cameraUp[0],cameraUp[1],cameraUp[2]) 
 
     glTranslate(p.x[0],p.y[0],p.z[0])
     glRotate(ry, 1, 0, 0)
     glRotate(rx, 0, 1, 0)
     glCallList(obj.gl_list)
-    #glColor(0,0,1)
 
-    #glMatrixMode(GL_MODELVIEW)
-    #glLoadIdentity()
-    #gluLookAt(cameraDist, cameraTarget, cameraUp)
-    #gluLookAt(cameraDist[0],cameraDist[1],cameraDist[2],cameraTarget[0],cameraTarget[1],cameraTarget[2],cameraUp[0],cameraUp[1],cameraUp[2])
-    #glPushMatrix()
-    #glTranslate(0,0,0)
-    #glTranslate(p.x[0],p.y[0],p.z[0])
-    #glColor(1,0,0)
-    #p.addParticle(0,py,0,pvx,pvy,pvz,pr,0,0,0,0,0,0)
-    #drawParticles()
-    #glutSolidSphere(p.r[0]/radiusDiv, SLICES, STACKS)
-    #print("z: %f" % p.z[0])
-
-    #for i in range(0,20):
-        #glTranslate(p.x[0]+1,p.y[0],i)
-        #glutSolidSphere(p.r[0]/radiusDiv, SLICES, STACKS)
     pygame.display.flip()
 
 
