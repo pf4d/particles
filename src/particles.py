@@ -28,13 +28,15 @@ class GranularMaterialForce(object):
     self.k     = k       # Elastic 'bounce'
     self.gamma = gamma   # Energy dissipation/loss
     self.g     = g       # Gravity
+    self.f     = 1.0
 
   def __call__(self, p):
     # Find position differences
-    r, rx, ry, rz = p.distanceMatrix( p.x, p.y, p.z)
+    d, dx, dy, dz = p.distanceMatrix(p.x, p.y, p.z)
 
     # Compute overlap
-    dr = r - p.sumOfRadii
+    dr = d - p.sumOfRadii
+    fill_diagonal(dr, 0)
 
     # No forces arising in no overlap cases
     dr[dr > 0] = 0
@@ -44,80 +46,90 @@ class GranularMaterialForce(object):
 
     # Velocity differences
     dv, dvx, dvy, dvz = p.distanceMatrix(p.vx, p.vy, p.vz)
-    domega, domegax, domegay, domegaz = p.distanceMatrix(p.omegax, 
-                                                         p.omegay, 
-                                                         p.omegaz)
+    da, dax, day, daz = p.distanceMatrix(p.ax, p.ay, p.az)
     
-    domegax[dr==0] = 0
-    domegay[dr==0] = 0
-    domegaz[dr==0] = 0
-
     # Damping terms
-    vijDotrij             = dvx*rx + dvy*ry + dvz*rz
+    vijDotrij             = dvx*dx + dvy*dy + dvz*dz
     vijDotrij[dr==0]      = 0 
-    omegaijDotrij         = domegax*rx + domegay*ry + domegaz*rz
-    omegaijDotrij[dr==0]  = 0 
 
     # Damping is subtracted from force
-    mag_r += self.gamma * vijDotrij / r
+    mag_r += self.gamma * vijDotrij / d
 
     # floor components of acceleration :
     crx, cry, crz, ctx, cty, ctz = self.floorConstraint(p)
 
     # Project onto components, sum all forces on each particle
-    p.ax = sum(mag_r * rx/r * p.ratioOfRadii, axis=1) + crx
-    p.ay = sum(mag_r * ry/r * p.ratioOfRadii, axis=1) + cry - self.g 
-    p.az = sum(mag_r * rz/r * p.ratioOfRadii, axis=1) + crz
-   
-    # find the tangential components of acceleration :
-    ax = tile(p.ax, (p.N, 1))
-    ay = tile(p.ay, (p.N, 1))
-    az = tile(p.az, (p.N, 1))
+    p.ax = sum(mag_r * dx/d * p.ratioOfRadii, axis=1) + crx
+    p.ay = sum(mag_r * dy/d * p.ratioOfRadii, axis=1) + cry - self.g 
+    p.az = sum(mag_r * dz/d * p.ratioOfRadii, axis=1) + crz
     
     omegax = tile(p.omegax, (p.N, 1))
     omegay = tile(p.omegay, (p.N, 1))
     omegaz = tile(p.omegaz, (p.N, 1))
+    
+    omegax = omegax + omegax.T 
+    omegay = omegax + omegax.T 
+    omegaz = omegax + omegax.T 
+    
     omegax[dr==0] = 0
     omegay[dr==0] = 0
     omegaz[dr==0] = 0
- 
-    f  = 1000000
-    wx = ax - (ax * rx) / r**2 * rx
-    wy = ay - (ay * ry) / r**2 * ry
-    wz = az - (az * rz) / r**2 * rz
+
+    # projection of a onto the tangent plane to r (tangential acceleration) :
+    atx = dax - (dax * dx) / d**2 * dx
+    aty = day - (day * dy) / d**2 * dy
+    atz = daz - (daz * dz) / d**2 * dz
     
-    w = sqrt(wx**2 + wy**2 + wz**2)
+    # projection of v onto the tangent plane to r (tangential velocity) : 
+    vtx = dvx - (dvx * dx) / d**2 * dx
+    vty = dvy - (dvy * dy) / d**2 * dy
+    vtz = dvz - (dvz * dz) / d**2 * dz
     
-    vtx = wx / w * omegax * p.r
-    vty = wy / w * omegay * p.r
-    vtz = wz / w * omegaz * p.r
-    
-    wx[dr==0] = 0
-    wy[dr==0] = 0
-    wz[dr==0] = 0
+    # calculate the radius vector to the point of torque :
+    radx = dx/d * p.r
+    rady = dy/d * p.r
+    radz = dz/d * p.r
+   
+    # no angular forces where particles do not touch :
+    atx[dr==0] = 0
+    aty[dr==0] = 0
+    atz[dr==0] = 0
     vtx[dr==0] = 0
     vty[dr==0] = 0
     vtz[dr==0] = 0
 
-    taux = ry*wz - wy*rz
-    tauy = rx*wz - wx*rz
-    tauz = rx*wy - wx*ry
+    # calculate torque (r x F) :
+    taux = rady*atz - aty*radz
+    tauy = radx*atz - atx*radz
+    tauz = radx*aty - atx*rady
 
-    epix = ry*vtz - vty*rz
-    epiy = rx*vtz - vtx*rz
-    epiz = rx*vty - vtx*ry
+    # calculate tangential velocity parallel to torque (r x vt) :
+    epix = rady*vtz - vty*radz
+    epiy = radx*vtz - vtx*radz
+    epiz = radx*vty - vtx*rady
 
+    # linear velocity frictional contribution to torque coefficient :
+    f = 0.0
+
+    # angular velocity damping coefficient from medium (air) :
+    g = 0.1
+
+    # moment of inertia for a sphere :
     I = 0.4*p.r**2
     
-    #epi = - f*omegaijDotrij / r
-    #epix = f*omegax
-    #epiy = f*omegay
-    #epiz = f*omegaz
-    
+    # angular momentum exchange coefficient :
+    kappa = 0.9*p.r
+   
     # project onto components, sum all angular forces on each particle
-    p.alphax = sum((taux - f*vtx) / I, axis=1) + ctx
-    p.alphay = sum((tauy - f*vty) / I, axis=1) + cty
-    p.alphaz = sum((tauz - f*vtz) / I, axis=1) + ctz
+    p.alphax = + sum(-(taux + f*epix) / I - kappa*omegax, axis=1) \
+               - g*p.omegax \
+               + ctx
+    p.alphay = + sum(-(tauy + f*epiy) / I - kappa*omegay, axis=1) \
+               - g*p.omegay \
+               + cty
+    p.alphaz = + sum(-(tauz + f*epiz) / I - kappa*omegaz, axis=1) \
+               - g*p.omegaz \
+               + ctz
 
   def floorConstraint(self, p):
     """ 
@@ -136,16 +148,17 @@ class GranularMaterialForce(object):
     cry = floorForce_r * r / p.r
     crz = 0
     
-    floorDamping_tx  = p.omegax
-    floorDamping_ty  = p.omegay
-    floorDamping_tz  = p.omegaz
-    floorDamping_tx[fd > 0] = 0 
-    floorDamping_ty[fd > 0] = 0 
-    floorDamping_tz[fd > 0] = 0 
+    floorDamping_tx  = p.omegax.copy()
+    floorDamping_ty  = p.omegay.copy()
+    floorDamping_tz  = p.omegaz.copy()
+    floorDamping_tx[fd == 0] = 0 
+    floorDamping_ty[fd == 0] = 0 
+    floorDamping_tz[fd == 0] = 0 
 
-    ctx = 0#-floorDamping_tx
-    cty = 0#-floorDamping_ty
-    ctz = 0#-floorDamping_tz
+    ctx = -self.f*floorDamping_tx
+    cty = -self.f*floorDamping_ty
+    ctz = -self.f*floorDamping_tz
+
     return crx, cry, crz, ctx, cty, ctz
 
 
@@ -168,11 +181,6 @@ class VerletIntegrator(object):
     p.thetay = p.thetay + p.omegay*dt + 0.5*p.alphay*dt**2
     p.thetaz = p.thetaz + p.omegaz*dt + 0.5*p.alphaz*dt**2
 
-    # 0 <= theta < 360
-    p.thetax = p.thetax % 360
-    p.thetay = p.thetay % 360
-    p.thetaz = p.thetaz % 360
-    
     # Update periodic BC
     p.pbcUpdate()
 
@@ -250,6 +258,9 @@ class Particles(object):
     self.vx = hstack((self.vx,vx))
     self.vy = hstack((self.vy,vy))
     self.vz = hstack((self.vz,vz))
+    self.ax = hstack((self.ax,0))
+    self.ay = hstack((self.ay,0))
+    self.az = hstack((self.az,0))
     self.r  = hstack((self.r,r))
     self.thetax = hstack((self.thetax,thetax))
     self.thetay = hstack((self.thetay,thetay))
@@ -257,11 +268,12 @@ class Particles(object):
     self.omegax = hstack((self.omegax,omegax))
     self.omegay = hstack((self.omegay,omegay))
     self.omegaz = hstack((self.omegaz,omegaz))
+    self.alphax = hstack((self.alphax,0))
+    self.alphay = hstack((self.alphay,0))
+    self.alphaz = hstack((self.alphaz,0))
     self.N  = self.N+1
     temp    = tile(self.r,(self.N,1))
-    self.sumOfRadii   = temp + temp.T 
-    self.sumOfRadii3  = temp**3 + (temp**3).T 
-    self.diffOfRadii3 = temp**3 - (temp**3).T 
+    self.sumOfRadii   = temp + temp.T
     self.ratioOfRadii = temp / temp.T
     self.f(self)
 
