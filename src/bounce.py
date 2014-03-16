@@ -5,7 +5,7 @@ from OpenGL.GL          import *
 from OpenGL.GLUT        import *
 from OpenGL.GLE         import *
 from OpenGL.GLU         import *
-from FTGL               import *
+#from FTGL               import *
 from time               import time
 import sys
 
@@ -87,19 +87,19 @@ def display():
   glRotate(rotz,0,0,1)
 
   # print statistics :
-  glPushMatrix()
-  glLoadIdentity()
+  #glPushMatrix()
+  #glLoadIdentity()
   
-  glColor(1.0,1.0,1.0,1.0) 
-  glRasterPos2f(L-2, L-1)
-  font = BitmapFont('ProggySquareSZ.ttf')
-  font.FaceSize(16)
+  #glColor(1.0,1.0,1.0,1.0) 
+  #glRasterPos2f(L-2, L-1)
+  #font = BitmapFont('ProggySquareSZ.ttf')
+  #font.FaceSize(16)
   #font = TextureFont('ProggySquareSZ.ttf')
   #font.FaceSize(13)
   #glScale(0.05, 0.05, 0.05)
-  font.Render("n = %i" % p.N)
-  glRasterPos2f(-L+1, L-1)
-  font.Render("%i FPS" % fps)
+  #font.Render("n = %i" % p.N)
+  #glRasterPos2f(-L+1, L-1)
+  #font.Render("%i FPS" % fps)
   #t1 = 'red particle statistics :'
   #t2 = 'theta (x,y,z): %.2E, %.2E, %.2E' % (p.thetax[0],p.thetay[0],p.thetaz[0])
   #t3 = 'omega (x,y,z): %.2E, %.2E, %.2E' % (p.omegax[0],p.omegay[0],p.omegaz[0])
@@ -113,7 +113,7 @@ def display():
   #glRasterPos2f(-L+1,-L+1.5)
   #font.Render(t4)
   
-  glPopMatrix()
+  #glPopMatrix()
   
   # draw the spheres :
   glPushMatrix() 

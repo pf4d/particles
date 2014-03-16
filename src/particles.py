@@ -57,10 +57,13 @@ class GranularMaterialForce(object):
 
     # floor components of acceleration :
     crx, cry, crz, ctx, cty, ctz = self.floorConstraint(p)
+    
+    grav = ones(p.N) * self.g
+    grav[0] = 0.0
 
     # Project onto components, sum all forces on each particle
     p.ax = sum(mag_r * dx/d * p.ratioOfRadii, axis=1) + crx
-    p.ay = sum(mag_r * dy/d * p.ratioOfRadii, axis=1) + cry - self.g 
+    p.ay = sum(mag_r * dy/d * p.ratioOfRadii, axis=1) + cry - grav
     p.az = sum(mag_r * dz/d * p.ratioOfRadii, axis=1) + crz
     
     omegax = tile(p.omegax, (p.N, 1))
