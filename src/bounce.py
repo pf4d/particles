@@ -5,7 +5,7 @@ from OpenGL.GL          import *
 from OpenGL.GLUT        import *
 from OpenGL.GLE         import *
 from OpenGL.GLU         import *
-#from FTGL               import *
+from FTGL               import *
 from time               import time
 import sys
 
@@ -26,8 +26,8 @@ vz        = 0      # depth velocity
 
 k         = 30.0   # elastic 'bounce'
 gamma     = 0.1    # energy dissipation/loss
-#k         = 1.5    # elastic 'bounce'
-#gamma     = 0.1    # energy dissipation/loss
+k         = 1.0    # elastic 'bounce'
+gamma     = 0.5    # energy dissipation/loss
 g         = 0.25   # downward acceleration
 
 on        = False  # start / stop adding particles
@@ -72,7 +72,222 @@ def init():
   glEnable(GL_LIGHTING)
   glEnable(GL_LIGHT0)
   glEnable(GL_LIGHT1)
+
+def print_p0_stats(dx, dy):
+  # disable lighting :
+  glDisable(GL_LIGHTING)
   
+  # print statistics :
+  glPushMatrix()
+  glLoadIdentity()
+  
+  glColor(1.0,1.0,1.0,1.0) 
+  font = BitmapFont('ProggySquareSZ.ttf')
+  font.FaceSize(16)
+  
+  t1 = 'red particle statistics (x,y,z) :'
+  t2 = 'theta        : %.2E, %.2E, %.2E' % (p.thetax[0],p.thetay[0],p.thetaz[0])
+  t3 = 'omega        : %.2E, %.2E, %.2E' % (p.omegax[0],p.omegay[0],p.omegaz[0])
+  t4 = 'alpha        : %.2E, %.2E, %.2E' % (p.alphax[0],p.alphay[0],p.alphaz[0])
+  t5 = 'position     : %.2E, %.2E, %.2E' % (p.x[0],  p.y[0],  p.z[0])
+  t6 = 'velocity     : %.2E, %.2E, %.2E' % (p.vx[0], p.vy[0], p.vz[0])
+  t7 = 'acceleration : %.2E, %.2E, %.2E' % (p.ax[0], p.ay[0], p.az[0])
+  glRasterPos2f(-L+dy,-(L-1)+dy*3)
+  font.Render(t1)
+  glRasterPos2f(-L+dy,-(L-1)+dy*2.5)
+  font.Render(t2)
+  glRasterPos2f(-L+dy,-(L-1)+dy*2)
+  font.Render(t3)
+  glRasterPos2f(-L+dy,-(L-1)+dy*1.5)
+  font.Render(t4)
+  glRasterPos2f(-L+dy,-(L-1)+dy*1.0)
+  font.Render(t5)
+  glRasterPos2f(-L+dy,-(L-1)+dy*0.5)
+  font.Render(t6)
+  glRasterPos2f(-L+dy,-(L-1)+dy*0.0)
+  font.Render(t7)
+  glPopMatrix()
+  
+  # re-enable lighting :
+  glEnable(GL_LIGHTING)
+  
+def print_stats(dx, dy):
+  # save projection matrix
+  glMatrixMode(GL_PROJECTION)
+  glPushMatrix()
+
+  # switch to orthographic projection :
+  glLoadIdentity()
+  glOrtho(-L, L, -L, L, -4*L, 4*L)
+
+  # back to the modelview matrix mode, so that we can translate/scale text :
+  glMatrixMode(GL_MODELVIEW)
+
+  glDisable(GL_LIGHTING)   # disable lighting
+  
+  # print statistics :
+  glPushMatrix()
+  glLoadIdentity()
+  
+  glColor(1.0,1.0,1.0,1.0) 
+  glRasterPos2f(L-dx, L-dy)
+  font = BitmapFont('ProggySquareSZ.ttf')
+  font.FaceSize(16)
+  #font = TextureFont('ProggySquareSZ.ttf')
+  #font.FaceSize(13)
+  #glScale(0.05, 0.05, 0.05)
+  font.Render("n = %i" % p.N)
+  glRasterPos2f(-L+dy, L-dy)
+  font.Render("%i FPS" % fps)
+  glPopMatrix()
+  
+  # re-enable lighting :
+  glEnable(GL_LIGHTING)
+
+  # get back to old perspective matrix :
+  glMatrixMode(GL_PROJECTION)
+  glPopMatrix()
+  glMatrixMode(GL_MODELVIEW)
+
+def draw_velocity_vectors():
+  """
+  draw velocity vectors.
+  """
+  glLineWidth(1.0)
+  glPopMatrix()  
+  glColor4f(1.0,1.0,1.0,1.0)
+  glDisable(GL_LIGHTING)
+  glBegin(GL_LINES)
+  for i in range(p.N):
+    v_mag = sqrt(p.vx[i]**2 + p.vy[i]**2 + p.vz[i]**2) + 1e-16
+    xyz1 = array([p.x[i],  p.y[i],  p.z[i]])
+    vxyz = array([p.vx[i], p.vy[i], p.vz[i]])
+    vxyz = vxyz / v_mag * 2.0*p.r[i]
+    xyz2 = xyz1 + vxyz
+    glVertex3fv(xyz1)
+    glVertex3fv(xyz2)
+  glEnd()
+  glEnable(GL_LIGHTING)
+  glPushMatrix()
+
+def draw_acceleration_vectors():
+  """
+  draw acceleration vectors.
+  """
+  glLineWidth(1.0)
+  glPopMatrix()  
+  glColor4f(1.0,0.0,0.0,1.0)
+  glDisable(GL_LIGHTING)
+  glBegin(GL_LINES)
+  for i in range(p.N):
+    a_mag = sqrt(p.ax[i]**2 + p.ay[i]**2 + p.az[i]**2) + 1e-16
+    xyz1 = array([p.x[i],  p.y[i],  p.z[i]])
+    axyz = array([p.ax[i], p.ay[i], p.az[i]])
+    axyz = axyz / a_mag * 2.0*p.r[i]
+    xyz2 = xyz1 + axyz
+    glVertex3fv(xyz1)
+    glVertex3fv(xyz2)
+  glEnd()
+  glEnable(GL_LIGHTING)
+  glPushMatrix()
+
+def rotate_vector(v, r):
+  """
+  rotate vector <v> about the x, y, and z axes by angles provided in <r> array.
+  """
+  rx = r[0]
+  ry = r[1]
+  rz = r[2]
+  c  = cos(rx)
+  s  = sin(rx)
+  Rx = array([[1, 0,  0],
+              [0, c, -s],
+              [0, s,  c]])
+  c  = cos(ry)
+  s  = sin(ry)
+  Ry = array([[ c, 0, s],
+              [ 0, 1, 0],
+              [-s, 0, c]])
+  c  = cos(rz)
+  s  = sin(rz)
+  Rz = array([[c, -s, 0],
+              [s,  c, 0],
+              [0,  0, 1]])
+  R  = dot(Rx, dot(Ry, Rz))
+  vn = dot(R, v)
+  return vn
+
+def draw_rotation_vectors():
+  """
+  draw rotation vectors.
+  """
+  glLineWidth(1.0)
+  glPopMatrix()  
+  glColor4f(0.0,1.0,1.0,1.0)
+  glDisable(GL_LIGHTING)
+  glBegin(GL_LINES)
+  for i in range(p.N):
+    xyz1  = array([p.x[i],  p.y[i],  p.z[i]])
+    fxyz  = array([0, 0, 1])            # initial forward vector
+    #uxyz  = array([0, 1, 0])            # initial up vector
+    uxyz  = array([p.omegax[i], p.omegay[i], p.omegaz[i]])
+    txyz  = array([p.thetax[i], p.thetay[i], p.thetaz[i]])
+    fxyz  = rotate_vector(fxyz, txyz)
+    uxyz  = rotate_vector(uxyz, txyz)
+    fxyz  = fxyz / norm(fxyz) * 2.0*p.r[i]
+    uxyz  = uxyz / norm(uxyz) * 2.0*p.r[i]
+    fxyz2 = xyz1 + fxyz
+    uxyz2 = xyz1 + uxyz
+    glVertex3fv(xyz1)
+    glVertex3fv(fxyz2)
+    glVertex3fv(xyz1)
+    glVertex3fv(uxyz2)
+  glEnd()
+  glEnable(GL_LIGHTING)
+  glPushMatrix()
+
+def draw_angular_velocity_vectors():  
+  """
+  draw angular velocity vectors.
+  """
+  glLineWidth(1.0)
+  glPopMatrix()
+  glColor4f(0.0,1.0,0.0,1.0)
+  glDisable(GL_LIGHTING)
+  glBegin(GL_LINES)
+  for i in range(p.N):
+    omega_mag = sqrt(p.omegax[i]**2 + p.omegay[i]**2 + p.omegaz[i]**2) + 1e-16
+    xyz1 = array([p.x[i],      p.y[i],      p.z[i]])
+    vxyz = array([p.omegax[i], p.omegay[i], p.omegaz[i]]) 
+    vxyz = vxyz / omega_mag * (p.r[i]+0.5)
+    xyz2 = xyz1 + vxyz
+    glVertex3fv(xyz1)
+    glVertex3fv(xyz2)
+  glEnd()
+  glEnable(GL_LIGHTING)
+  glPushMatrix()
+  
+def draw_angular_acceleration_vectors():
+  """
+  draw angular acceleration vectors.
+  """ 
+  glLineWidth(1.0)
+  glPopMatrix()
+  glColor4f(1.0,1.0,0.0,1.0)
+  glDisable(GL_LIGHTING)
+  glBegin(GL_LINES)
+  for i in range(p.N):
+    alpha_mag = sqrt(p.alphax[i]**2 + p.alphay[i]**2 + p.alphaz[i]**2) + 1e-16
+    xyz1 = array([p.x[i],      p.y[i],      p.z[i]])
+    vxyz = array([p.alphax[i], p.alphay[i], p.alphaz[i]])
+    vxyz = vxyz / alpha_mag * (p.r[i]+0.5)
+    xyz2 = xyz1 + vxyz
+    glVertex3fv(xyz1)
+    glVertex3fv(xyz2)
+  glEnd()
+  glEnable(GL_LIGHTING)
+  glPushMatrix()
+
 def display():
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
  
@@ -85,35 +300,14 @@ def display():
   glRotate(rotx,1,0,0)
   glRotate(roty,0,1,0)
   glRotate(rotz,0,0,1)
+  
+  # interval to space text : 
+  dx = 0.2 * L
+  dy = 0.1 * L
 
   # print statistics :
-  #glPushMatrix()
-  #glLoadIdentity()
-  
-  #glColor(1.0,1.0,1.0,1.0) 
-  #glRasterPos2f(L-2, L-1)
-  #font = BitmapFont('ProggySquareSZ.ttf')
-  #font.FaceSize(16)
-  #font = TextureFont('ProggySquareSZ.ttf')
-  #font.FaceSize(13)
-  #glScale(0.05, 0.05, 0.05)
-  #font.Render("n = %i" % p.N)
-  #glRasterPos2f(-L+1, L-1)
-  #font.Render("%i FPS" % fps)
-  #t1 = 'red particle statistics :'
-  #t2 = 'theta (x,y,z): %.2E, %.2E, %.2E' % (p.thetax[0],p.thetay[0],p.thetaz[0])
-  #t3 = 'omega (x,y,z): %.2E, %.2E, %.2E' % (p.omegax[0],p.omegay[0],p.omegaz[0])
-  #t4 = 'alpha (x,y,z): %.2E, %.2E, %.2E' % (p.alphax[0],p.alphay[0],p.alphaz[0])
-  #glRasterPos2f(-L+1,-L+3)
-  #font.Render(t1)
-  #glRasterPos2f(-L+1,-L+2.5)
-  #font.Render(t2)
-  #glRasterPos2f(-L+1,-L+2)
-  #font.Render(t3)
-  #glRasterPos2f(-L+1,-L+1.5)
-  #font.Render(t4)
-  
-  #glPopMatrix()
+  print_p0_stats(dx,dy)
+  print_stats(dx,dy)
   
   # draw the spheres :
   glPushMatrix() 
@@ -146,9 +340,11 @@ def display():
     
     glPushMatrix()
     glTranslate(p.x[i], p.y[i], p.z[i])
-    glRotate(p.thetax[i]*180/pi, 1,0,0)
-    glRotate(p.thetay[i]*180/pi, 0,1,0)
-    glRotate(p.thetaz[i]*180/pi, 0,0,1)
+    tmag = sqrt(p.thetax[i]**2 + p.thetay[i]**2 + p.thetaz[i]**2)
+    glRotate(tmag*180/pi, p.omegax[i], p.omegay[i], p.omegaz[i])
+    #glRotate(p.thetax[i]*180/pi, 1,0,0)
+    #glRotate(p.thetay[i]*180/pi, 0,1,0)
+    #glRotate(p.thetaz[i]*180/pi, 0,0,1)
     glMaterial(GL_FRONT, GL_SPECULAR,  [0.5, 0.5, 0.5, 0.0])
     glMaterial(GL_FRONT, GL_SHININESS, 100.0)
     glutSolidSphere(p.r[i]/radiusDiv, SLICES, STACKS)
@@ -157,58 +353,14 @@ def display():
     glMaterial(GL_FRONT, GL_SHININESS, 0.0)
     glutWireSphere(p.r[i]/radiusDiv*1.01, SLICES/6, STACKS/6)
     glPopMatrix()
+
+  # draw vectors on particles :
+  #draw_velocity_vectors()
+  #draw_acceleration_vectors()
+  #draw_rotation_vectors()
+  #draw_angular_velocity_vectors()
+  #draw_angular_acceleration_vectors()   
    
-  ## draw velocity vectors : 
-  #glPopMatrix()  
-  #glColor4f(1.0,1.0,1.0,1.0)
-  #glDisable(GL_LIGHTING)
-  #glBegin(GL_LINES)
-  #for i in range(p.N):
-  #  v_mag = sqrt(p.vx[i]**2 + p.vy[i]**2 + p.vz[i]**2) + 1e-16
-  #  xyz1 = array([p.x[i],  p.y[i],  p.z[i]])
-  #  vxyz = array([p.vx[i], p.vy[i], p.vz[i]])
-  #  vxyz = vxyz / v_mag * (p.r[i]+0.5)
-  #  xyz2 = xyz1 + vxyz
-  #  glVertex3fv(xyz1)
-  #  glVertex3fv(xyz2)
-  #glEnd()
-  #glEnable(GL_LIGHTING)
-  #glPushMatrix()
-  #
-  ## draw angular velocity vectors : 
-  #glPopMatrix()
-  #glColor4f(0.0,1.0,0.0,1.0)
-  #glDisable(GL_LIGHTING)
-  #glBegin(GL_LINES)
-  #for i in range(p.N):
-  #  omega_mag = sqrt(p.omegax[i]**2 + p.omegay[i]**2 + p.omegaz[i]**2) + 1e-16
-  #  xyz1 = array([p.x[i],      p.y[i],      p.z[i]])
-  #  vxyz = array([p.omegax[i], p.omegay[i], p.omegaz[i]]) 
-  #  vxyz = vxyz / omega_mag * (p.r[i]+0.5)
-  #  xyz2 = xyz1 + vxyz
-  #  glVertex3fv(xyz1)
-  #  glVertex3fv(xyz2)
-  #glEnd()
-  #glEnable(GL_LIGHTING)
-  #glPushMatrix()
-  #
-  ## draw angular acceleration vectors : 
-  #glPopMatrix()
-  #glColor4f(1.0,0.0,0.0,1.0)
-  #glDisable(GL_LIGHTING)
-  #glBegin(GL_LINES)
-  #for i in range(p.N):
-  #  alpha_mag = sqrt(p.alphax[i]**2 + p.alphay[i]**2 + p.alphaz[i]**2) + 1e-16
-  #  xyz1 = array([p.x[i],      p.y[i],      p.z[i]])
-  #  vxyz = array([p.alphax[i], p.alphay[i], p.alphaz[i]])
-  #  vxyz = vxyz / alpha_mag * (p.r[i]+0.5)
-  #  xyz2 = xyz1 + vxyz
-  #  glVertex3fv(xyz1)
-  #  glVertex3fv(xyz2)
-  #glEnd()
-  #glEnable(GL_LIGHTING)
-  #glPushMatrix()
- 
   # draw the lights : 
   lx1 = 0.0
   ly1 = 2*L + 2

@@ -28,7 +28,7 @@ class GranularMaterialForce(object):
     self.k     = k       # Elastic 'bounce'
     self.gamma = gamma   # Energy dissipation/loss
     self.g     = g       # Gravity
-    self.f     = 1.0
+    self.f     = 0.01
 
   def __call__(self, p):
     # Find position differences
@@ -49,35 +49,30 @@ class GranularMaterialForce(object):
     da, dax, day, daz = p.distanceMatrix(p.ax, p.ay, p.az)
     
     # Damping terms
-    vijDotrij             = dvx*dx + dvy*dy + dvz*dz
-    vijDotrij[dr==0]      = 0 
+    vijDotdij             = dvx*dx + dvy*dy + dvz*dz
+    vijDotdij[dr==0]      = 0
 
     # Damping is subtracted from force
-    mag_r += self.gamma * vijDotrij / d
+    mag_r += self.gamma * vijDotdij / d
 
     # floor components of acceleration :
     crx, cry, crz, ctx, cty, ctz = self.floorConstraint(p)
     
-    grav = ones(p.N) * self.g
+    grav    = ones(p.N) * self.g
     grav[0] = 0.0
 
     # Project onto components, sum all forces on each particle
     p.ax = sum(mag_r * dx/d * p.ratioOfRadii, axis=1) + crx
-    p.ay = sum(mag_r * dy/d * p.ratioOfRadii, axis=1) + cry - grav
+    p.ay = sum(mag_r * dy/d * p.ratioOfRadii, axis=1) + cry - self.g
     p.az = sum(mag_r * dz/d * p.ratioOfRadii, axis=1) + crz
     
-    omegax = tile(p.omegax, (p.N, 1))
-    omegay = tile(p.omegay, (p.N, 1))
-    omegaz = tile(p.omegaz, (p.N, 1))
-    
-    omegax = omegax + omegax.T 
-    omegay = omegax + omegax.T 
-    omegaz = omegax + omegax.T 
-    
-    omegax[dr==0] = 0
-    omegay[dr==0] = 0
-    omegaz[dr==0] = 0
-
+    # differences in angular velocities :
+    do, dox, doy, doz = p.distanceMatrix(p.omegax, p.omegay, p.omegaz)
+    dox[dr==0] = 0
+    doy[dr==0] = 0
+    doz[dr==0] = 0
+    do[dr==0]  = 0
+   
     # projection of a onto the tangent plane to r (tangential acceleration) :
     atx = dax - (dax * dx) / d**2 * dx
     aty = day - (day * dy) / d**2 * dy
@@ -102,35 +97,40 @@ class GranularMaterialForce(object):
     vtz[dr==0] = 0
 
     # calculate torque (r x F) :
-    taux = rady*atz - aty*radz
-    tauy = radx*atz - atx*radz
-    tauz = radx*aty - atx*rady
+    taux = rady*atz - radz*aty
+    tauy = radz*atx - radx*atz
+    tauz = radx*aty - rady*atx
 
     # calculate tangential velocity parallel to torque (r x vt) :
-    epix = rady*vtz - vty*radz
-    epiy = radx*vtz - vtx*radz
-    epiz = radx*vty - vtx*rady
+    epix = rady*vtz - radz*vty
+    epiy = radz*vtx - radx*vtz
+    epiz = radx*vty - rady*vtx
+
+    # angular acceleration coefficient:
+    k = 0.5
 
     # linear velocity frictional contribution to torque coefficient :
     f = 0.0
 
     # angular velocity damping coefficient from medium (air) :
-    g = 0.1
+    g = 0.01
 
     # moment of inertia for a sphere :
     I = 0.4*p.r**2
     
-    # angular momentum exchange coefficient :
-    kappa = 0.9*p.r
+    # angular momentum exchange coefficient (damping term) :
+    oijDotdij        = dox*dx + doy*dy + doz*dz
+    oijDotdij[dr==0] = 0
+    kappa            = self.f * p.r
    
     # project onto components, sum all angular forces on each particle
-    p.alphax = + sum(-(taux + f*epix) / I - kappa*omegax, axis=1) \
+    p.alphax = + sum(-(k*taux + f*epix) / I + kappa*dox, axis=1) \
                - g*p.omegax \
                + ctx
-    p.alphay = + sum(-(tauy + f*epiy) / I - kappa*omegay, axis=1) \
+    p.alphay = + sum(-(k*tauy + f*epiy) / I + kappa*doy, axis=1) \
                - g*p.omegay \
                + cty
-    p.alphaz = + sum(-(tauz + f*epiz) / I - kappa*omegaz, axis=1) \
+    p.alphaz = + sum(-(k*tauz + f*epiz) / I + kappa*doz, axis=1) \
                - g*p.omegaz \
                + ctz
 
