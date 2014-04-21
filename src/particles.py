@@ -28,7 +28,7 @@ class GranularMaterialForce(object):
     self.k     = k       # Elastic 'bounce'
     self.gamma = gamma   # Energy dissipation/loss
     self.g     = g       # Gravity
-    self.f     = 0.01
+    self.f     = 0.00
 
   def __call__(self, p):
     # Find position differences
@@ -107,7 +107,7 @@ class GranularMaterialForce(object):
     epiz = radx*vty - rady*vtx
 
     # angular acceleration coefficient:
-    k = 0.5
+    k = 1.0
 
     # linear velocity frictional contribution to torque coefficient :
     f = 0.0

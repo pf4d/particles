@@ -51,7 +51,10 @@ p = Particles(L, f, periodicY=0, periodicZ=1, periodicX=1)
 #  addParticle(x, y, z, vx, vy, vz, r,
 #              thetax, thetay, thetaz, 
 #              omegax, omegay, omegaz): 
-p.addParticle(0,2*L,0,0,0,0,1.0/2,0,0,0,0,0,0)
+p.addParticle(4,  -L/2+1/2.0,0,0,0,0,1.0/2,0,0,0,1,1,0)
+p.addParticle(2,  -L/2+1/2.0,0,0,0,0,1.0/2,0,0,0,1,0,0)
+p.addParticle(0,  -L/2+1/2.0,0,0,0,0,1.0/2,0,0,0,0,1,0)
+p.addParticle(-2, -L/2+1/2.0,0,0,0,0,1.0/2,0,0,0,0,0,1)
 # instantiate Integrator
 integrate = VerletIntegrator(dt)
 
@@ -191,32 +194,6 @@ def draw_acceleration_vectors():
   glEnable(GL_LIGHTING)
   glPushMatrix()
 
-def rotate_vector(v, r):
-  """
-  rotate vector <v> about the x, y, and z axes by angles provided in <r> array.
-  """
-  rx = r[0]
-  ry = r[1]
-  rz = r[2]
-  c  = cos(rx)
-  s  = sin(rx)
-  Rx = array([[1, 0,  0],
-              [0, c, -s],
-              [0, s,  c]])
-  c  = cos(ry)
-  s  = sin(ry)
-  Ry = array([[ c, 0, s],
-              [ 0, 1, 0],
-              [-s, 0, c]])
-  c  = cos(rz)
-  s  = sin(rz)
-  Rz = array([[c, -s, 0],
-              [s,  c, 0],
-              [0,  0, 1]])
-  R  = dot(Rx, dot(Ry, Rz))
-  vn = dot(R, v)
-  return vn
-
 def draw_rotation_vectors():
   """
   draw rotation vectors.
@@ -288,6 +265,122 @@ def draw_angular_acceleration_vectors():
   glEnable(GL_LIGHTING)
   glPushMatrix()
 
+def QuaternionFromEuler(pitch, yaw, roll):
+  """
+  Convert from Euler Angles.
+  """
+  # Basically we create 3 Quaternions, one for pitch, one for yaw, one for roll
+  # and multiply those together.
+  # the calculation below does the same, just shorter
+ 
+  p = pitch / 2.0
+  y = yaw   / 2.0
+  r = roll  / 2.0
+ 
+  sinp = sin(p)
+  siny = sin(y)
+  sinr = sin(r)
+  cosp = cos(p)
+  cosy = cos(y)
+  cosr = cos(r)
+ 
+  x = sinr * cosp * cosy - cosr * sinp * siny
+  y = cosr * sinp * cosy + sinr * cosp * siny
+  z = cosr * cosp * siny - sinr * sinp * cosy
+  w = cosr * cosp * cosy + sinr * sinp * siny
+ 
+  v = array([x,y,z,w])
+  return v / norm(v)
+
+def rotate_vector(v, r):
+  """
+  rotate vector <v> about the x, y, and z axes by angles provided in <r> array.
+  """
+  rx = r[0]
+  ry = r[1]
+  rz = r[2]
+  c  = cos(rx)
+  s  = sin(rx)
+  Rx = array([[1, 0,  0],
+              [0, c, -s],
+              [0, s,  c]])
+  c  = cos(ry)
+  s  = sin(ry)
+  Ry = array([[ c, 0, s],
+              [ 0, 1, 0],
+              [-s, 0, c]])
+  c  = cos(rz)
+  s  = sin(rz)
+  Rz = array([[c, -s, 0],
+              [s,  c, 0],
+              [0,  0, 1]])
+  R  = dot(Rx, dot(Ry, Rz))
+  vn = dot(R, v)
+  return vn
+
+def Rx(theta):
+  c  = cos(theta)
+  s  = sin(theta)
+  Rx = array([[1, 0,  0],
+              [0, c, -s],
+              [0, s,  c]])
+  return Rx
+
+def Ry(theta):
+  c  = cos(theta)
+  s  = sin(theta)
+  Ry = array([[ c, 0, s],
+              [ 0, 1, 0],
+              [-s, 0, c]])
+  return Ry
+
+def Rz(theta):
+  c  = cos(theta)
+  s  = sin(theta)
+  Rz = array([[c, -s, 0],
+              [s,  c, 0],
+              [0,  0, 1]])
+  return Rz
+
+def get_mvm(r):
+  rx = r[0]
+  ry = r[1]
+  rz = r[2]
+  
+  # rotation angle about X-axis (pitch)
+  sx = sin(rx)
+  cx = cos(rx)
+
+  # rotation angle about Y-axis (yaw)
+  sy = sin(ry)
+  cy = cos(ry)
+
+  # rotation angle about Z-axis (roll)
+  sz = sin(rz)
+  cz = cos(rz)
+
+  # determine left axis
+  leftx = cy*cz
+  lefty = sx*sy*cz + cx*sz
+  leftz = -cx*sy*cz + sx*sz
+
+  # determine up axis
+  upx = -cy*sz
+  upy = -sx*sy*sz + cx*cz
+  upz = cx*sy*sz + sx*cz
+
+  # determine forward axis
+  forwardx = sy
+  forwardy = -sx*cy
+  forwardz = cx*cy
+
+  mat = array([[leftx, upx, forwardx, 0],
+               [lefty, upy, forwardy, 0],
+               [leftz, upz, forwardz, 0],
+               [0,     0,   0,        1]])
+
+  return mat
+
 def display():
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
  
@@ -340,11 +433,51 @@ def display():
     
     glPushMatrix()
     glTranslate(p.x[i], p.y[i], p.z[i])
-    tmag = sqrt(p.thetax[i]**2 + p.thetay[i]**2 + p.thetaz[i]**2)
-    glRotate(tmag*180/pi, p.omegax[i], p.omegay[i], p.omegaz[i])
+    
+    #===========================================================================
+    # rotation bullshit :
+    #tmag = p.thetax[i] + p.thetay[i] + p.thetaz[i]
+    #vec1 = QuaternionFromEuler(-p.thetay[i], -p.thetaz[i], -p.thetax[i])
+    #glRotate(vec1[3]*180/pi, vec1[0], vec1[1], vec1[2])
+    #glRotate(tmag*180/pi, p.omegax[i], p.omegay[i], p.omegaz[i])
+    #glRotate(p.thetax[i]*180/pi, p.omegax[i], p.omegay[i], p.omegaz[i])
+    #glRotate(p.thetay[i]*180/pi, p.omegax[i], p.omegay[i], p.omegaz[i])
+    #glRotate(p.thetaz[i]*180/pi, p.omegax[i], p.omegay[i], p.omegaz[i])
+    
+    #v   = array([p.thetax[i], p.thetay[i], p.thetaz[i]])
+    #mat = get_mvm(v)
+    #mvm = glGetFloatv(GL_MODELVIEW_MATRIX)
+    
+    #tem = Rx(p.thetax[i])
+    #tem = dot(mvm[:3,:3], tem)
+    #mvm[:3,:3] = tem
+    #tem = Ry(p.thetay[i])
+    #tem = dot(mvm[:3,:3], tem)
+    #mvm[:3,:3] = tem
+    #tem = Rz(p.thetaz[i])
+    #tem = dot(mvm[:3,:3], tem)
+    #mvm[:3,:3] = tem
+    #glLoadMatrixf(mvm)
+    
+    glRotate(p.thetax[i]*180/pi, 1,0,0)
+    #mvm[:3,:3] = Rx(p.thetax[i])
+    #glLoadMatrixf(mvm)
+    glRotate(p.thetay[i]*180/pi, 0,1,0)
+    #mvm[:3,:3] = Ry(p.thetay[i])
+    #glLoadMatrixf(mvm)
+    glRotate(p.thetaz[i]*180/pi, 0,0,1)
+    #mvm[:3,:3] = Rz(p.thetaz[i])
+    #glLoadMatrixf(mvm)
+    
     #glRotate(p.thetax[i]*180/pi, 1,0,0)
     #glRotate(p.thetay[i]*180/pi, 0,1,0)
     #glRotate(p.thetaz[i]*180/pi, 0,0,1)
+    #glRotate(p.thetax[i]*180/pi, p.omegax[i],0,0)
+    #glRotate(p.thetay[i]*180/pi, p.omegax[i],p.omegay[i],0)
+    #glRotate(p.thetaz[i]*180/pi, p.omegax[i],p.omegay[i],p.omegaz[i])
+    
+    #===========================================================================
+
     glMaterial(GL_FRONT, GL_SPECULAR,  [0.5, 0.5, 0.5, 0.0])
     glMaterial(GL_FRONT, GL_SHININESS, 100.0)
     glutSolidSphere(p.r[i]/radiusDiv, SLICES, STACKS)
@@ -358,7 +491,7 @@ def display():
   #draw_velocity_vectors()
   #draw_acceleration_vectors()
   #draw_rotation_vectors()
-  #draw_angular_velocity_vectors()
+  draw_angular_velocity_vectors()
   #draw_angular_acceleration_vectors()   
    
   # draw the lights : 
