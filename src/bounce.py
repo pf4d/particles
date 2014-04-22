@@ -17,7 +17,7 @@ frames    = 0      # for spf calculation
 lastTime  = time() # current time
 fps       = 1.0    # current frames per second
 
-dt        = 0.10   # time step taken by the time integration routine.
+dt        = 0.02   # time step taken by the time integration routine.
 L         = 10.0   # size of the box.
 t         = 0      # initial time
 vy        = 0      # vertical velocity
@@ -281,6 +281,34 @@ def get_quat(heading, attitude, bank):
   z = c1*s2*c3 - s1*c2*s3
   return array([x,y,z,w])
 
+def get_axis_angle(p, y, r):
+  s3 = sin(p/2)
+  c3 = cos(p/2)
+  s1 = sin(y/2)
+  c1 = cos(y/2)
+  s2 = sin(r/2)
+  c2 = cos(r/2)
+
+  c1c2 = c1*c2
+  s1s2 = s1*s2
+  
+  w = c1c2*c3  - s1s2*s3
+  x = c1c2*s3  + s1s2*c3
+  y = s1*c2*c3 + c1*s2*s3
+  z = c1*s2*c3 - s1*c2*s3
+  
+  angle = 2 * arccos(w)
+  vec = array([x,y,z])
+  return angle, vec/norm(vec) 
+
+def axis_angle_to_quat(vec, angle):
+  s = sin(angle/2)
+  x = vec[0] * s
+  y = vec[1] * s
+  z = vec[2] * s
+  w = cos(angle/2)
+  return array([x,y,z,w])
+
 def rotate_vector(v, r):
   """
   rotate vector <v> about the x, y, and z axes by angles provided in <r> array.
@@ -386,26 +414,34 @@ def display():
     
     #===========================================================================
     # rotation bullshit :
-    #vec = get_quat(p.thetay[i], p.thetax[i], p.thetaz[i])
+    #vec = get_quat(p.thetay[i], p.thetaz[i], p.thetax[i])
     #glRotate(vec[3]*180/pi, vec[0], vec[1], vec[2])
+    #if i==3: print 'x,y,z,w:', vec[0], vec[1], vec[2], vec[3]
+    
+    #angle, vec = get_axis_angle(p.thetax[i], p.thetay[i], p.thetaz[i])
+    #vec = axis_angle_to_quat(vec, angle)
+    #glRotate(vec[3]*180/pi, vec[0], vec[1], vec[2])
+    #if i==3: print 'x,y,z,w:', vec[0], vec[1], vec[2], vec[3]
+    #glRotate(angle*180/pi, vec[0], vec[1], vec[2])
+    #if i==0: print 'x,y,z,w:', vec[0], vec[1], vec[2], angle
     
     #v   = array([p.thetax[i], p.thetay[i], p.thetaz[i]])
-    mvm = glGetFloatv(GL_MODELVIEW_MATRIX)
+    #mvm = glGetFloatv(GL_MODELVIEW_MATRIX)
+    #
+    #temx = Rx(p.thetax[i])
+    #temx = dot(temx.T, mvm[:3,:3])
+    #mvm[:3,:3] = temx
+    #temy = Ry(p.thetay[i])
+    #temy = dot(temy.T, mvm[:3,:3])
+    #mvm[:3,:3] = temy
+    #temz = Rz(p.thetaz[i])
+    #temz = dot(temz.T, mvm[:3,:3])
+    #mvm[:3,:3] = temz
+    #glLoadMatrixf(mvm)
     
-    temx = Rx(p.thetax[i])
-    temx = dot(temx.T, mvm[:3,:3])
-    mvm[:3,:3] = temx
-    temy = Ry(p.thetay[i])
-    temy = dot(temy.T, mvm[:3,:3])
-    mvm[:3,:3] = temy
-    temz = Rz(p.thetaz[i])
-    temz = dot(temz.T, mvm[:3,:3])
-    mvm[:3,:3] = temz
-    glLoadMatrixf(mvm)
-    
-    #glRotate(p.thetax[i]*180/pi, 1,0,0)
-    #glRotate(p.thetay[i]*180/pi, 0,1,0)
-    #glRotate(p.thetaz[i]*180/pi, 0,0,1)
+    glRotate(p.thetax[i]*180/pi, 1,0,0)
+    glRotate(p.thetay[i]*180/pi, 0,1,0)
+    glRotate(p.thetaz[i]*180/pi, 0,0,1)
     #===========================================================================
 
     glMaterial(GL_FRONT, GL_SPECULAR,  [0.5, 0.5, 0.5, 0.0])
