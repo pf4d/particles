@@ -309,6 +309,37 @@ def axis_angle_to_quat(vec, angle):
   w = cos(angle/2)
   return array([x,y,z,w])
 
+def matrixFromAxisAngle(angle, x, y, z):
+  c = cos(angle)
+  s = sin(angle)
+  t = 1.0 - c
+  mag = sqrt(x**2 + y**2 + z**2)
+  x /= mag
+  y /= mag
+  z /= mag
+
+  m00 = c + x*x*t
+  m11 = c + y*y*t
+  m22 = c + z*z*t
+
+  tmp1 = x*y*t
+  tmp2 = z*s
+  m10  = tmp1 + tmp2
+  m01  = tmp1 - tmp2
+  tmp1 = x*z*t
+  tmp2 = y*s
+  m20  = tmp1 - tmp2
+  m02  = tmp1 + tmp2
+  tmp1 = y*z*t
+  tmp2 = x*s
+  m21  = tmp1 + tmp2
+  m12  = tmp1 - tmp2
+  
+  mat = array([[m00, m01, m02],
+               [m10, m11, m12],
+               [m20, m21, m22]])
+  return mat
+
 def rotate_vector(v, r):
   """
   rotate vector <v> about the x, y, and z axes by angles provided in <r> array.
@@ -358,6 +389,37 @@ def Rz(theta):
               [s,  c, 0],
               [0,  0, 1]])
   return Rz
+
+def rotate(angle, x, y, z):
+  c = cos(angle)
+  s = sin(angle)
+  xx = x * x
+  xy = x * y
+  xz = x * z
+  yy = y * y
+  yz = y * z
+  zz = z * z
+
+  # build rotation matrix
+  m = zeros((4,4))
+  m[0,0] = xx * (1 - c) + c
+  m[0,1] = xy * (1 - c) - z * s
+  m[0,2] = xz * (1 - c) + y * s
+  m[0,3] = 0
+  m[1,0] = xy * (1 - c) + z * s
+  m[1,1] = yy * (1 - c) + c
+  m[1,2] = yz * (1 - c) - x * s
+  m[1,3] = 0
+  m[2,0] = xz * (1 - c) - y * s
+  m[2,1] = yz * (1 - c) + x * s
+  m[2,2] = zz * (1 - c) + c
+  m[2,3] = 0
+  m[3,0] = 0
+  m[3,1] = 0
+  m[3,2] = 0
+  m[3,3] = 1
+
+  return m
 
 def display():
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
@@ -414,6 +476,11 @@ def display():
     
     #===========================================================================
     # rotation bullshit :
+    om = array([p.omegax[i], p.omegay[i], p.omegaz[i]])
+    th = array([p.thetax[i], p.thetay[i], p.thetaz[i]])  
+    #if i==1: print norm(om)*dt*180/pi
+    glRotate(norm(th)*180/pi, om[0], om[1], om[2])
+    
     #vec = get_quat(p.thetay[i], p.thetaz[i], p.thetax[i])
     #glRotate(vec[3]*180/pi, vec[0], vec[1], vec[2])
     #if i==3: print 'x,y,z,w:', vec[0], vec[1], vec[2], vec[3]
@@ -427,21 +494,33 @@ def display():
     
     #v   = array([p.thetax[i], p.thetay[i], p.thetaz[i]])
     #mvm = glGetFloatv(GL_MODELVIEW_MATRIX)
-    #
+    
     #temx = Rx(p.thetax[i])
     #temx = dot(temx.T, mvm[:3,:3])
+    ##temx = dot(mvm[:3,:3], temx.T)
     #mvm[:3,:3] = temx
     #temy = Ry(p.thetay[i])
     #temy = dot(temy.T, mvm[:3,:3])
+    ##temy = dot(mvm[:3,:3], temy.T)
     #mvm[:3,:3] = temy
     #temz = Rz(p.thetaz[i])
     #temz = dot(temz.T, mvm[:3,:3])
+    ##temz = dot(mvm[:3,:3], temz.T)
     #mvm[:3,:3] = temz
     #glLoadMatrixf(mvm)
     
-    glRotate(p.thetax[i]*180/pi, 1,0,0)
-    glRotate(p.thetay[i]*180/pi, 0,1,0)
-    glRotate(p.thetaz[i]*180/pi, 0,0,1)
+    #mvm  = glGetFloatv(GL_MODELVIEW_MATRIX)
+    #temx = rotate(p.thetax[i],1,0,0)
+    #mvm  = dot(temx.T, mvm)
+    #temy = rotate(p.thetay[i],0,1,0)
+    #mvm  = dot(temy.T, mvm)
+    #temz = rotate(p.thetaz[i],0,0,1)
+    #mvm  = dot(temz.T, mvm)
+    #glLoadMatrixf(mvm)
+    
+    #glRotate(p.thetax[i]*180/pi, 1,0,0)
+    #glRotate(p.thetay[i]*180/pi, 0,1,0)
+    #glRotate(p.thetaz[i]*180/pi, 0,0,1)
     #===========================================================================
 
     glMaterial(GL_FRONT, GL_SPECULAR,  [0.5, 0.5, 0.5, 0.0])
