@@ -267,81 +267,6 @@ def draw_angular_acceleration_vectors():
   glEnable(GL_LIGHTING)
   glPushMatrix()
 
-def get_quat(heading, attitude, bank):
-  # Assuming the angles are in radians.
-  c1 = cos(heading/2)
-  s1 = sin(heading/2)
-  c2 = cos(attitude/2)
-  s2 = sin(attitude/2)
-  c3 = cos(bank/2)
-  s3 = sin(bank/2)
-  c1c2 = c1*c2
-  s1s2 = s1*s2
-  w = c1c2*c3  - s1s2*s3
-  x = c1c2*s3  + s1s2*c3
-  y = s1*c2*c3 + c1*s2*s3
-  z = c1*s2*c3 - s1*c2*s3
-  return array([x,y,z,w])
-
-def get_axis_angle(p, y, r):
-  s3 = sin(p/2)
-  c3 = cos(p/2)
-  s1 = sin(y/2)
-  c1 = cos(y/2)
-  s2 = sin(r/2)
-  c2 = cos(r/2)
-
-  c1c2 = c1*c2
-  s1s2 = s1*s2
-  
-  w = c1c2*c3  - s1s2*s3
-  x = c1c2*s3  + s1s2*c3
-  y = s1*c2*c3 + c1*s2*s3
-  z = c1*s2*c3 - s1*c2*s3
-  
-  angle = 2 * arccos(w)
-  vec = array([x,y,z])
-  return angle, vec/norm(vec) 
-
-def axis_angle_to_quat(vec, angle):
-  s = sin(angle/2)
-  x = vec[0] * s
-  y = vec[1] * s
-  z = vec[2] * s
-  w = cos(angle/2)
-  return array([x,y,z,w])
-
-def matrixFromAxisAngle(angle, x, y, z):
-  c = cos(angle)
-  s = sin(angle)
-  t = 1.0 - c
-  mag = sqrt(x**2 + y**2 + z**2)
-  x /= mag
-  y /= mag
-  z /= mag
-
-  m00 = c + x*x*t
-  m11 = c + y*y*t
-  m22 = c + z*z*t
-
-  tmp1 = x*y*t
-  tmp2 = z*s
-  m10  = tmp1 + tmp2
-  m01  = tmp1 - tmp2
-  tmp1 = x*z*t
-  tmp2 = y*s
-  m20  = tmp1 - tmp2
-  m02  = tmp1 + tmp2
-  tmp1 = y*z*t
-  tmp2 = x*s
-  m21  = tmp1 + tmp2
-  m12  = tmp1 - tmp2
-  
-  mat = array([[m00, m01, m02],
-               [m10, m11, m12],
-               [m20, m21, m22]])
-  return mat
-
 def rotate_vector(v, r):
   """
   rotate vector <v> about the x, y, and z axes by angles provided in <r> array.
@@ -392,36 +317,6 @@ def Rz(theta):
               [0,  0, 1]])
   return Rz
 
-def rotate(angle, x, y, z):
-  c = cos(angle)
-  s = sin(angle)
-  xx = x * x
-  xy = x * y
-  xz = x * z
-  yy = y * y
-  yz = y * z
-  zz = z * z
-
-  # build rotation matrix
-  m = zeros((4,4))
-  m[0,0] = xx * (1 - c) + c
-  m[0,1] = xy * (1 - c) - z * s
-  m[0,2] = xz * (1 - c) + y * s
-  m[0,3] = 0
-  m[1,0] = xy * (1 - c) + z * s
-  m[1,1] = yy * (1 - c) + c
-  m[1,2] = yz * (1 - c) - x * s
-  m[1,3] = 0
-  m[2,0] = xz * (1 - c) - y * s
-  m[2,1] = yz * (1 - c) + x * s
-  m[2,2] = zz * (1 - c) + c
-  m[2,3] = 0
-  m[3,0] = 0
-  m[3,1] = 0
-  m[3,2] = 0
-  m[3,3] = 1
-
-  return m
 
 def display():
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT)
