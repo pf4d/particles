@@ -17,7 +17,7 @@ frames    = 0      # for spf calculation
 lastTime  = time() # current time
 fps       = 1.0    # current frames per second
 
-dt        = 0.02   # time step taken by the time integration routine.
+dt        = 0.10   # time step taken by the time integration routine.
 L         = 10.0   # size of the box.
 t         = 0      # initial time
 vy        = 0      # vertical velocity
@@ -51,10 +51,12 @@ p = Particles(L, f, periodicY=0, periodicZ=1, periodicX=1)
 #  addParticle(x, y, z, vx, vy, vz, r,
 #              thetax, thetay, thetaz, 
 #              omegax, omegay, omegaz): 
-p.addParticle(4,  -L/2+1/2.0,0,0,0,0,1.0/2,0,0,0,1,1,0)
-p.addParticle(2,  -L/2+1/2.0,0,0,0,0,1.0/2,0,0,0,1,0,0)
-p.addParticle(0,  -L/2+1/2.0,0,0,0,0,1.0/2,0,0,0,0,1,0)
-p.addParticle(-2, -L/2+1/2.0,0,0,0,0,1.0/2,0,0,0,0,0,1)
+p.addParticle(0, L,0,0,0,0,1.0/2,0,0,0,0,0,0)
+#p.addParticle(4,  -L/2+1/2.0,0,0,0,0,1.0/2,0,0,0,1,1,0)
+#p.addParticle(2,  -L/2+1/2.0,0,0,0,0,1.0/2,0,0,0,1,0,0)
+#p.addParticle(0,  -L/2+1/2.0,0,0,0,0,1.0/2,0,0,0,0,1,0)
+#p.addParticle(-2, -L/2+1/2.0,0,0,0,0,1.0/2,0,0,0,0,0,1)
+
 # instantiate Integrator
 integrate = VerletIntegrator(dt)
 
@@ -474,55 +476,13 @@ def display():
     glPushMatrix()
     glTranslate(p.x[i], p.y[i], p.z[i])
     
-    #===========================================================================
-    # rotation bullshit :
-    om = array([p.omegax[i], p.omegay[i], p.omegaz[i]])
-    th = array([p.thetax[i], p.thetay[i], p.thetaz[i]])  
-    #if i==1: print norm(om)*dt*180/pi
-    glRotate(norm(th)*180/pi, om[0], om[1], om[2])
-    
-    #vec = get_quat(p.thetay[i], p.thetaz[i], p.thetax[i])
-    #glRotate(vec[3]*180/pi, vec[0], vec[1], vec[2])
-    #if i==3: print 'x,y,z,w:', vec[0], vec[1], vec[2], vec[3]
-    
-    #angle, vec = get_axis_angle(p.thetax[i], p.thetay[i], p.thetaz[i])
-    #vec = axis_angle_to_quat(vec, angle)
-    #glRotate(vec[3]*180/pi, vec[0], vec[1], vec[2])
-    #if i==3: print 'x,y,z,w:', vec[0], vec[1], vec[2], vec[3]
-    #glRotate(angle*180/pi, vec[0], vec[1], vec[2])
-    #if i==0: print 'x,y,z,w:', vec[0], vec[1], vec[2], angle
-    
-    #v   = array([p.thetax[i], p.thetay[i], p.thetaz[i]])
-    #mvm = glGetFloatv(GL_MODELVIEW_MATRIX)
-    
-    #temx = Rx(p.thetax[i])
-    #temx = dot(temx.T, mvm[:3,:3])
-    ##temx = dot(mvm[:3,:3], temx.T)
-    #mvm[:3,:3] = temx
-    #temy = Ry(p.thetay[i])
-    #temy = dot(temy.T, mvm[:3,:3])
-    ##temy = dot(mvm[:3,:3], temy.T)
-    #mvm[:3,:3] = temy
-    #temz = Rz(p.thetaz[i])
-    #temz = dot(temz.T, mvm[:3,:3])
-    ##temz = dot(mvm[:3,:3], temz.T)
-    #mvm[:3,:3] = temz
-    #glLoadMatrixf(mvm)
-    
-    #mvm  = glGetFloatv(GL_MODELVIEW_MATRIX)
-    #temx = rotate(p.thetax[i],1,0,0)
-    #mvm  = dot(temx.T, mvm)
-    #temy = rotate(p.thetay[i],0,1,0)
-    #mvm  = dot(temy.T, mvm)
-    #temz = rotate(p.thetaz[i],0,0,1)
-    #mvm  = dot(temz.T, mvm)
-    #glLoadMatrixf(mvm)
-    
-    #glRotate(p.thetax[i]*180/pi, 1,0,0)
-    #glRotate(p.thetay[i]*180/pi, 0,1,0)
-    #glRotate(p.thetaz[i]*180/pi, 0,0,1)
-    #===========================================================================
+    # rotation :
+    mvm = glGetFloatv(GL_MODELVIEW_MATRIX)
+    M   = dot(p.theta[i], mvm[:3,:3])
+    mvm[:3,:3] = M
+    glLoadMatrixf(mvm)
 
+    # draw spehere :
     glMaterial(GL_FRONT, GL_SPECULAR,  [0.5, 0.5, 0.5, 0.0])
     glMaterial(GL_FRONT, GL_SHININESS, 100.0)
     glutSolidSphere(p.r[i]/radiusDiv, SLICES, STACKS)
@@ -535,7 +495,7 @@ def display():
   # draw vectors on particles :
   #draw_velocity_vectors()
   #draw_acceleration_vectors()
-  draw_rotation_vectors()
+  #draw_rotation_vectors()
   draw_angular_velocity_vectors()
   #draw_angular_acceleration_vectors()   
    
