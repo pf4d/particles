@@ -25,9 +25,9 @@ vx        = 0      # horizontal velocity
 vz        = 0      # depth velocity
 
 k         = 30.0   # elastic 'bounce'
-gamma     = 0.1    # energy dissipation/loss
-k         = 1.0    # elastic 'bounce'
-gamma     = 0.5    # energy dissipation/loss
+gamma     = 1.0    # energy dissipation/loss
+#k         = 1.0    # elastic 'bounce'
+#gamma     = 0.5    # energy dissipation/loss
 g         = 0.25   # downward acceleration
 
 on        = False  # start / stop adding particles
@@ -237,7 +237,7 @@ def draw_angular_velocity_vectors():
   for i in range(p.N):
     omega_mag = sqrt(p.omegax[i]**2 + p.omegay[i]**2 + p.omegaz[i]**2) + 1e-16
     xyz1 = array([p.x[i],      p.y[i],      p.z[i]])
-    vxyz = array([p.omegax[i], p.omegay[i], p.omegaz[i]]) 
+    vxyz = -array([p.omegax[i], p.omegay[i], p.omegaz[i]]) 
     vxyz = vxyz / omega_mag * (p.r[i]+0.5)
     xyz2 = xyz1 + vxyz
     glVertex3fv(xyz1)
@@ -258,7 +258,7 @@ def draw_angular_acceleration_vectors():
   for i in range(p.N):
     alpha_mag = sqrt(p.alphax[i]**2 + p.alphay[i]**2 + p.alphaz[i]**2) + 1e-16
     xyz1 = array([p.x[i],      p.y[i],      p.z[i]])
-    vxyz = array([p.alphax[i], p.alphay[i], p.alphaz[i]])
+    vxyz = -array([p.alphax[i], p.alphay[i], p.alphaz[i]])
     vxyz = vxyz / alpha_mag * (p.r[i]+0.5)
     xyz2 = xyz1 + vxyz
     glVertex3fv(xyz1)
